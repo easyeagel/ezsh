@@ -52,8 +52,9 @@ void TaskPool::stop()
     if(stared_==false)
         return;
 
-    work_.reset();
-    for(auto& thd: threads_)
+    auto& inst=instance();
+    inst.work_.reset();
+    for(auto& thd: inst.threads_)
     {
         if(thd.joinable())
             thd.join();

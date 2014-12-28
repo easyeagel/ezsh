@@ -24,26 +24,17 @@
 #include<string>
 #include<vector>
 #include<iostream>
+#include<boost/variant.hpp>
 
 namespace ezsh
 {
 
-class Variable
-{
-    enum Type {eValue, eList};
-
-    Type type;
-
-    union
-    {
-        //std::string value;
-        //std::vector<std::string> list;
-    };
-
-public:
-    ~Variable()
-    {}
-};
+class Variable:
+    public boost::variant<
+        std::string,
+        std::vector<std::string>
+    >
+{};
 
 class Context;
 class ContextStack;
@@ -120,6 +111,12 @@ public:
         return top();
     }
 
+    template<typename C=Context>
+    const ContextSPtr& create()
+    {
+        return ContextSPtr (new C(top()));
+    }
+
     void pop()
     {
         //最后一个Context是主Context，永远不能被弹出
@@ -145,5 +142,4 @@ private:
 
 
 }  // namespace ezsh
-
 

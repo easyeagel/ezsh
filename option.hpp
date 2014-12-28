@@ -44,7 +44,7 @@ public:
         service_.post(std::move(call));
     }
 
-    void stop();
+    static void stop();
 
 private:
     void run();
@@ -79,10 +79,8 @@ public:
         std::cerr << opt_ << std::endl;
     }
 
-    void parse(const ContextSPtr& context, int ac, const char* const* av)
+    void parse(int ac, const char* const* av)
     {
-        context_=context;
-
         bp::command_line_parser parser(ac, av);
         parser.options(opt_);
         parser.positional(optPos_);
@@ -95,6 +93,12 @@ public:
     const bp::variables_map& mapGet() const
     {
         return vm_;
+    }
+
+    virtual MainReturn init(const ContextSPtr& context)
+    {
+        context_=context;
+        return MainReturn::eGood;
     }
 
     virtual MainReturn doit() = 0;
@@ -124,15 +128,32 @@ public:
         return std::unique_ptr<OptBase>(new Obj);
     }
 
+    static const char* moduleGet()
+    {
+        return "core";
+    }
+
 };
+
+typedef std::function<void ()> CmdHelp;
+typedef std::function<std::unique_ptr<OptBase>()> CmdCreate;
+
+struct CmdTrait
+{
+    std::string name;
+    std::string module;
+
+    CmdCreate create;
+};
+
+typedef std::shared_ptr<CmdTrait> CmdTraitSPtr;
 
 class CmdDict
 {
 public:
-    typedef std::function<std::unique_ptr<OptBase>()> ObjCreate;
-    typedef std::map<std::string, ObjCreate> Dict;
+    typedef std::map<std::string, CmdTraitSPtr> Dict;
 
-    static ObjCreate find(const std::string& cmd)
+    static CmdTraitSPtr find(const std::string& cmd)
     {
         auto itr=dictGet().find(cmd);
         if(itr==dictGet().end())
@@ -153,7 +174,8 @@ struct OptRegisterT
 
 OptRegisterT()
 {
-    CmdDict::dictGet().emplace(Opt::nameGet(), Opt::create);
+    CmdTraitSPtr ptr(new CmdTrait{Opt::nameGet(), Opt::moduleGet(), Opt::create});
+    CmdDict::dictGet().emplace(Opt::nameGet(), std::move(ptr));
 }
 
 };
