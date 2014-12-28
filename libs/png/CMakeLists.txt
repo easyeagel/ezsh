@@ -7,7 +7,7 @@ include_directories(${CMAKE_CONFIGURATION_HEADER_DIR} ${CMAKE_CURRENT_SOURCE_DIR
 set(libpng_public_hdrs
   png.h
   pngconf.h
-  ${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.h
+  ${CMAKE_CONFIGURATION_HEADER_DIR}/pnglibconf.h
 )
 set(libpng_sources
   ${libpng_public_hdrs}

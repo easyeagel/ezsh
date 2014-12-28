@@ -46,6 +46,10 @@ extern void* VP8GetCPUInfo;   // opaque forward declaration.
 
 //------------------------------------------------------------------------------
 
+#ifdef _MSC_VER
+#define fopen(CppName, CppMode) _wfopen((const wchar_t*)CppName, L ## CppMode)
+#endif
+
 static int verbose = 0;
 
 static int ReadYUV(FILE* in_file, WebPPicture* const pic) {

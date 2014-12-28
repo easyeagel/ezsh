@@ -36,8 +36,8 @@ class Variable
 
     union
     {
-        std::string value;
-        std::vector<std::string> list;
+        //std::string value;
+        //std::vector<std::string> list;
     };
 
 public:

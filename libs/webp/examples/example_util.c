@@ -23,6 +23,9 @@
 #include "webp/decode.h"
 #include "./stopwatch.h"
 
+#ifdef _MSC_VER
+#define fopen(CppName, CppMode) _wfopen((const wchar_t*)CppName, L ## CppMode)
+#endif
 //------------------------------------------------------------------------------
 // String parsing
 

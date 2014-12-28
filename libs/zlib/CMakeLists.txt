@@ -91,7 +91,7 @@ include_directories(${CMAKE_CONFIGURATION_HEADER_DIR} ${CMAKE_SOURCE_DIR})
 #============================================================================
 
 set(ZLIB_PUBLIC_HDRS
-    ${CMAKE_CURRENT_BINARY_DIR}/zconf.h
+    ${CMAKE_CONFIGURATION_HEADER_DIR}/zconf.h
     zlib.h
 )
 set(ZLIB_PRIVATE_HDRS

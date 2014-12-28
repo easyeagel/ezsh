@@ -29,6 +29,7 @@ extern "C"
 
 #include"option.hpp"
 
+
 namespace ezsh
 {
 
@@ -160,12 +161,12 @@ private:
         }
 
         //task可能在this结束后再运行
-        auto task=[out, in,
-             quality=std::to_string(quality_),
-             alphaQuality=std::to_string(alphaQuality_)]() mutable
+        auto task=[this, out, in]() mutable
         {
-			auto const outPath = convert(out.native());
-			auto const inPath = convert(in.native());
+			auto const outPath = out.native();
+			auto const inPath = in.native();
+            auto const quality=std::to_string(quality_);
+            auto const alphaQuality=std::to_string(alphaQuality_);
             const char* cmdt[] =
             {
                 "cwep", "-quiet",
@@ -173,8 +174,8 @@ private:
                 "-q",       quality.c_str(),
                 "-alpha_q", alphaQuality.c_str(),
 
-                "-o",       outPath.c_str(),
-                inPath.c_str(),
+                "-o",       reinterpret_cast<const char*>(outPath.c_str()),
+                reinterpret_cast<const char*>(inPath.c_str()),
             };
 
             std::vector<const char*> cmd(cmdt, cmdt+(sizeof(cmdt)/sizeof(cmdt[0])));
@@ -193,31 +194,6 @@ private:
         return bf::is_regular_file(path)
             && boost::algorithm::iends_with(path.string(), ".png");
     }
-
-	static std::string convert(const std::string& s)
-	{
-		return s;
-	}
-
-	static std::string convert(const std::wstring& s)
-	{
-		if (s.empty())
-			return std::string();
-
-		std::string ret(s.size()*16, '\0');
-#ifdef _MSC_VER
-		size_t const destlen = ::WideCharToMultiByte(CP_ACP, 0, s.c_str(), s.size()*sizeof(wchar_t),
-			const_cast<char*>(ret.data()), ret.size(),
-			nullptr, nullptr);
-#else
-		size_t const destlen = ::wcstombs(const_cast<char*>(ret.data()), s.c_str(), ret.size());
-#endif
-		if (destlen == static_cast<size_t>(-1))
-			ret.clear();
-		else
-			ret.resize(destlen);
-		return std::move(ret);
-	}
 
 private:
     bool concurrency_=false;

@@ -115,16 +115,3 @@ set_target_properties(webp PROPERTIES
   COMPILE_FLAGS "-w -DGMacroCWepbMain=cwebp_main -DGMacroDWebpMain=dwebp_main"
 )
 
-add_executable(cwebp examples/cwebp.c)
-target_link_libraries(cwebp webp)
-
-add_executable(dwebp examples/dwebp.c)
-target_link_libraries(dwebp webp)
-
-if(OptWindows)
-    set_target_properties(cwebp PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
-    set_target_properties(dwebp PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
-endif()
-
-set_target_properties(jpeg cwebp dwebp PROPERTIES COMPILE_FLAGS "-w")
-

@@ -55,6 +55,9 @@ extern void* VP8GetCPUInfo;   // opaque forward declaration.
 #endif
 #endif  // WEBP_DLL
 
+#ifdef _MSC_VER
+#define fopen(CppName, CppMode) _wfopen((const wchar_t*)CppName, L ## CppMode)
+#endif
 //------------------------------------------------------------------------------
 
 // Output types
