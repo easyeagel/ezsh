@@ -31,19 +31,11 @@ namespace bf=boost::filesystem;
 
 class FileSet
 {
-    class Component: public OptComponent
+    class Component: public OptionComponent
     {
     public:
-        void longHelp (std::ostream& strm) override
-        {
-            strm << "  fileset\n\n" << std::endl;
-        }
-
-        void shortHelp(std::ostream& strm) override
-        {
-            strm << "  fileset\n\n" << std::endl;
-        }
-
+        void longHelp (std::ostream& strm) override;
+        void shortHelp(std::ostream& strm) override;
         void options(bp::options_description& opt, bp::positional_options_description& pos) override;
     };
 
@@ -78,9 +70,9 @@ public:
         }
     };
 
-    static OptComponentSPtr componentGet()
+    static OptionComponentSPtr componentGet()
     {
-        static OptComponentSPtr ptr;
+        static OptionComponentSPtr ptr;
         if(!ptr)
             ptr.reset(new Component);
         return ptr;
@@ -106,6 +98,12 @@ public:
     {
         return sets_;
     }
+
+    static const char* nameGet()
+    {
+        return "fileset";
+    }
+
 private:
     bool recursive_=false;
     std::set<FileUnit> sets_;

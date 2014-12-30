@@ -186,9 +186,9 @@ private:
     std::vector<ScriptUnit> script_;
 };
 
-class CmdScript:public OptBaseT<CmdScript>
+class CmdScript:public CmdBaseT<CmdScript>
 {
-    typedef OptBaseT<CmdScript> BaseThis;
+    typedef CmdBaseT<CmdScript> BaseThis;
 public:
     CmdScript()
         :BaseThis("script - run file as ezsh script")
@@ -254,7 +254,7 @@ public:
 
 namespace
 {
-static OptRegisterT<CmdScript> gsRegister;
+static CmdRegisterT<CmdScript> gsRegister;
 }
 
 

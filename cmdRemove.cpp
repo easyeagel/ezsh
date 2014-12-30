@@ -26,9 +26,9 @@ namespace ezsh
 
 namespace bf=boost::filesystem;
 
-class CmdRemove:public OptBaseT<CmdRemove>
+class CmdRemove:public CmdBaseT<CmdRemove>
 {
-    typedef OptBaseT<CmdRemove> BaseThis;
+    typedef CmdBaseT<CmdRemove> BaseThis;
 public:
     CmdRemove()
         :BaseThis("remove - remove file or dir")
@@ -93,7 +93,7 @@ private:
 
 namespace
 {
-static OptRegisterT<CmdRemove> gsRegister;
+static CmdRegisterT<CmdRemove> gsRegister;
 }
 
 

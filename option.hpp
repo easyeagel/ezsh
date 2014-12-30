@@ -68,22 +68,22 @@ enum class MainReturn
 
 namespace bp=boost::program_options;
 
-class OptComponent
+class OptionComponent
 {
 public:
     virtual void longHelp (std::ostream& strm) = 0;
     virtual void shortHelp(std::ostream& strm) = 0;
     virtual void options(bp::options_description& opt, bp::positional_options_description& pos) = 0;
 
-    virtual ~OptComponent()=default;
+    virtual ~OptionComponent()=default;
 };
 
-typedef std::shared_ptr<OptComponent> OptComponentSPtr;
+typedef std::shared_ptr<OptionComponent> OptionComponentSPtr;
 
-class OptBase
+class CmdBase
 {
 protected:
-    OptBase(const char* msg)
+    CmdBase(const char* msg)
         :opt_(msg)
     {}
 
@@ -91,7 +91,7 @@ public:
     virtual void help(std::ostream& strm=std::cerr);
     virtual void parse(int ac, const char* const* av);
     virtual MainReturn init(const ContextSPtr& context);
-    virtual ~OptBase();
+    virtual ~CmdBase();
 
     virtual MainReturn doit() = 0;
 
@@ -110,20 +110,22 @@ protected:
     bp::positional_options_description optPos_;
 
     bp::options_description optComponents_;
-    std::vector<OptComponentSPtr> components_;
+    std::vector<OptionComponentSPtr> components_;
+
+    bp::options_description optAll_;
 };
 
 template<typename Obj>
-class OptBaseT: public OptBase
+class CmdBaseT: public CmdBase
 {
 public:
-    OptBaseT(const char* msg)
-        :OptBase(msg)
+    CmdBaseT(const char* msg)
+        :CmdBase(msg)
     {}
 
-    static std::unique_ptr<OptBase> create()
+    static std::unique_ptr<CmdBase> create()
     {
-        return std::unique_ptr<OptBase>(new Obj);
+        return std::unique_ptr<CmdBase>(new Obj);
     }
 
     static const char* moduleGet()
@@ -133,8 +135,7 @@ public:
 
 };
 
-typedef std::function<void ()> CmdHelp;
-typedef std::function<std::unique_ptr<OptBase>()> CmdCreate;
+typedef std::function<std::unique_ptr<CmdBase>()> CmdCreate;
 
 struct CmdTrait
 {
@@ -167,10 +168,10 @@ public:
 };
 
 template<typename Opt>
-struct OptRegisterT
+struct CmdRegisterT
 {
 
-OptRegisterT()
+CmdRegisterT()
 {
     CmdTraitSPtr ptr(new CmdTrait{Opt::nameGet(), Opt::moduleGet(), Opt::create});
     CmdDict::dictGet().emplace(Opt::nameGet(), std::move(ptr));
@@ -178,5 +179,39 @@ OptRegisterT()
 
 };
 
+class OptionDict
+{
+public:
+    typedef std::map<std::string, OptionComponentSPtr> Dict;
+
+    static OptionComponentSPtr find(const std::string& cmd)
+    {
+        auto itr=dictGet().find(cmd);
+        if(itr==dictGet().end())
+            return nullptr;
+        return std::get<1>(*itr);
+    }
+
+    static Dict& dictGet()
+    {
+        static Dict gs;
+        return gs;
+    }
+};
+
+template<typename Option>
+struct OptionRegisterT
+{
+
+OptionRegisterT()
+{
+    OptionDict::dictGet().emplace(Option::nameGet(), Option::componentGet());
 }
+
+};
+
+
+
+}
+
 

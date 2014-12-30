@@ -128,9 +128,9 @@ private:
     std::shared_ptr<SQLite::Statement> query_;
 };
 
-class CmdSQLiteImport: public OptBaseT<CmdSQLiteImport>
+class CmdSQLiteImport: public CmdBaseT<CmdSQLiteImport>
 {
-    typedef OptBaseT<CmdSQLiteImport> BaseThis;
+    typedef CmdBaseT<CmdSQLiteImport> BaseThis;
 public:
     CmdSQLiteImport()
         :BaseThis("sqliteImport - import file or dir to sqlite database")
@@ -170,7 +170,7 @@ public:
 
 namespace
 {
-static OptRegisterT<CmdSQLiteImport> gsRegister;
+static CmdRegisterT<CmdSQLiteImport> gsRegister;
 }
 
 }

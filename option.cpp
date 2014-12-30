@@ -65,21 +65,27 @@ bool TaskPool::stared_=false;
 
 
 
-void OptBase::help(std::ostream& strm)
+void CmdBase::help(std::ostream& strm)
 {
     strm << opt_ << std::endl;
     for(auto& c: components_)
         c->shortHelp(strm);
 }
 
-void OptBase::parse(int ac, const char* const* av)
+void CmdBase::parse(int ac, const char* const* av)
 {
     for(auto& c: components_)
         c->options(optComponents_, optPos_);
 
     bp::command_line_parser parser(ac, av);
-    parser.options(opt_);
-    parser.options(optComponents_);
+    if(optComponents_.options().empty())
+    {
+        parser.options(opt_);
+    } else {
+        optAll_.add(opt_);
+        optAll_.add(optComponents_);
+        parser.options(optAll_);
+    }
     parser.positional(optPos_);
     parser.style(bp::command_line_style::default_style);
 
@@ -87,16 +93,93 @@ void OptBase::parse(int ac, const char* const* av)
     bp::notify(vm_);
 }
 
-MainReturn OptBase::init(const ContextSPtr& context)
+MainReturn CmdBase::init(const ContextSPtr& context)
 {
     context_=context;
     return MainReturn::eGood;
 }
 
-OptBase::~OptBase()
+CmdBase::~CmdBase()
 {}
 
 
 
 }  // namespace ezsh
+
+//实现命令help，option
+namespace ezsh
+{
+
+class CmdHelp:public CmdBaseT<CmdHelp>
+{
+    typedef CmdBaseT<CmdHelp> BaseThis;
+public:
+    CmdHelp()
+        :BaseThis("help - show help message")
+    {
+        opt_.add_options()
+            ("long", "show long help")
+            ("cmd",  bp::value<std::vector<std::string>>(), "show only this command")
+        ;
+        optPos_.add("cmd", -1);
+    }
+
+    static const char* nameGet()
+    {
+        return "help";
+    }
+
+    MainReturn doit() override
+    {
+        std::cerr <<
+            "ezsh command [options]\n\n";
+
+        for(const auto& u: CmdDict::dictGet())
+        {
+            const auto& trait=std::get<1>(u);
+            const auto& cmd=trait->create();
+            cmd->help(std::cerr);
+            std::cerr << std::endl;
+        }
+
+        return MainReturn::eGood;
+    }
+};
+
+class CmdOption:public CmdBaseT<CmdOption>
+{
+    typedef CmdBaseT<CmdOption> BaseThis;
+public:
+    CmdOption()
+        :BaseThis("option - show option message")
+    {
+        opt_.add_options()
+            ("option", bp::value<std::vector<std::string>>(), "show only option")
+        ;
+        optPos_.add("option", -1);
+    }
+
+    static const char* nameGet()
+    {
+        return "option";
+    }
+
+    MainReturn doit() override
+    {
+        std::cerr << "valid options list: " << std::endl;
+        const auto& opts=OptionDict::dictGet();
+        for(const auto& opt: opts)
+            opt.second->longHelp(std::cerr);
+        return MainReturn::eGood;
+    }
+};
+
+namespace
+{
+static CmdRegisterT<CmdHelp> gsHelp;
+static CmdRegisterT<CmdOption> gsOption;
+}
+
+
+}
 

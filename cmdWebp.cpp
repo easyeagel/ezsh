@@ -34,9 +34,9 @@ namespace ezsh
 {
 
 namespace bf=boost::filesystem;
-class CmdCWebp:public OptBaseT<CmdCWebp>
+class CmdCWebp:public CmdBaseT<CmdCWebp>
 {
-    typedef OptBaseT<CmdCWebp> BaseThis;
+    typedef CmdBaseT<CmdCWebp> BaseThis;
 
     struct Unit
     {
@@ -204,7 +204,7 @@ private:
 
 namespace
 {
-static OptRegisterT<CmdCWebp> gsRegister;
+static CmdRegisterT<CmdCWebp> gsRegister;
 }
 
 

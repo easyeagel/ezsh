@@ -18,38 +18,19 @@
 
 #include"option.hpp"
 
-namespace ezsh
-{
-
-void help()
-{
-    std::cerr <<
-        "ezsh command [options]\n\n";
-
-    for(const auto& u: CmdDict::dictGet())
-    {
-        const auto& trait=std::get<1>(u);
-        const auto& cmd=trait->create();
-        cmd->help(std::cerr);
-    }
-}
-
-}
-
 int main(int argc, const char* const* argv)
 {
-    if(argc<=1)
-    {
-        ezsh::help();
-        return static_cast<int>(ezsh::MainReturn::eParamInvalid);
-    }
-
-    const auto trait=ezsh::CmdDict::find(argv[1]);
+    std::string cmdName(argc<=1 ? "help" : argv[1]);
+    auto trait=ezsh::CmdDict::find(cmdName);
     if(trait==nullptr)
     {
-        ezsh::help();
-        return static_cast<int>(ezsh::MainReturn::eParamInvalid);
+        std::cerr
+            << "\n\nunkown command: "
+            << argv[1] << "\n\n" << std::endl;
+        argc=2;
+        trait=ezsh::CmdDict::find("help");
     }
+    assert(trait);
 
     auto& cs=ezsh::ContextStack::instance();
     const auto& cmd=trait->create();
@@ -58,7 +39,6 @@ int main(int argc, const char* const* argv)
         cmd->parse(argc-1, argv+1);
     } catch (const boost::program_options::error& ec) {
         std::cerr << ec.what() << std::endl;
-        ezsh::help();
         return static_cast<int>(ezsh::MainReturn::eParamInvalid);
     }
 

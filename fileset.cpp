@@ -96,6 +96,20 @@ void FileSet::Component::options(bp::options_description& opt, bp::positional_op
     pos.add("fsFile", -1);
 }
 
+void FileSet::Component::longHelp (std::ostream& strm)
+{
+    bp::options_description opt;
+    bp::positional_options_description pos;
+    options(opt, pos);
+    strm << "fileset - select files with parttern or regex\n";
+    strm << opt << std::endl;
+}
+
+void FileSet::Component::shortHelp(std::ostream& strm)
+{
+    strm << "  fileset select files with parttern or regex, run \"option fileset\" for details\n\n" << std::endl;
+}
+
 void FileSet::init(const bp::variables_map& vm)
 {
     recursive_=vm.count("fsRecursive") ? true : false;
@@ -179,5 +193,10 @@ void FileSet::scan()
 
 }
 
+namespace
+{
+    static ezsh::OptionRegisterT<ezsh::FileSet> gsOptionFileSet;
+}
 }  // namespace ezsh
+
 
