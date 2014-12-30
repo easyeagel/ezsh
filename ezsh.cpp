@@ -30,7 +30,7 @@ void help()
     {
         const auto& trait=std::get<1>(u);
         const auto& cmd=trait->create();
-        cmd->help();
+        cmd->help(std::cerr);
     }
 }
 

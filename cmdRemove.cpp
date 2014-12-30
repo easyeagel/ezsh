@@ -19,9 +19,12 @@
 #include<boost/filesystem.hpp>
 
 #include"option.hpp"
+#include"fileset.hpp"
 
 namespace ezsh
 {
+
+namespace bf=boost::filesystem;
 
 class CmdRemove:public OptBaseT<CmdRemove>
 {
@@ -31,11 +34,10 @@ public:
         :BaseThis("remove - remove file or dir")
     {
         opt_.add_options()
-            ("force,f",     "ignore nonexistent files and arguments")
-            ("recursive,r", "remove dir recursively")
-            ("file", bp::value<std::vector<std::string>>()->required(), "file or dir to remove")
+            ("force,f", "ignore nonexistent files and arguments")
         ;
-        optPos_.add("file", -1);
+
+        components_.push_back(FileSet::componentGet());
     }
 
     static const char* nameGet()
@@ -45,49 +47,48 @@ public:
 
     MainReturn doit() override
     {
-        namespace bf=boost::filesystem;
-
         const auto& vm=mapGet();
+
+        files_.init(vm);
+
         const bool force=vm.count("force") ? true : false;
-        const bool recursive=vm.count("recursive") ? true : false;
-        const auto& files=vm["file"].as<std::vector<std::string>>();
-        for(const auto& file: files)
+        for(const auto& file: files_.setGet())
         {
-            const bool exist=bf::exists(file);
-            if(exist==false)
+            if(!file.isExist())
             {
                 if(force)
                     continue;
-                context_->stdCErr() << file << ": not exist" << std::endl;
+                context_->stdCErr() << file.total << ": not exist" << std::endl;
                 continue;
             }
 
             boost::system::error_code ec;
-            const bool isDir=bf::is_directory(file);
-            if(isDir==false)
+            if(!file.isDir())
             {
-                bf::remove(file, ec);
+                bf::remove(file.total, ec);
                 if(ec && !force)
-                    context_->stdCErr() << file << ": " << ec.message() << std::endl;
+                    context_->stdCErr() << file.total << ": " << ec.message() << std::endl;
                 continue;
             }
 
-            if(recursive)
+            if(files_.isRecursive())
             {
-                bf::remove_all(file, ec);
+                bf::remove_all(file.total, ec);
                 if(ec && !force)
-                    context_->stdCErr() << file << ": " << ec.message() << std::endl;
+                    context_->stdCErr() << file.total << ": " << ec.message() << std::endl;
                 continue;
             }
 
-            bf::remove(file, ec);
+            bf::remove(file.total, ec);
             if(ec && !force)
-                context_->stdCErr() << file << ": " << ec.message() << std::endl;
+                context_->stdCErr() << file.total << ": " << ec.message() << std::endl;
         }
 
         return MainReturn::eGood;
     }
 
+private:
+    FileSet files_;
 };
 
 namespace

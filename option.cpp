@@ -63,5 +63,40 @@ void TaskPool::stop()
 
 bool TaskPool::stared_=false;
 
+
+
+void OptBase::help(std::ostream& strm)
+{
+    strm << opt_ << std::endl;
+    for(auto& c: components_)
+        c->shortHelp(strm);
+}
+
+void OptBase::parse(int ac, const char* const* av)
+{
+    for(auto& c: components_)
+        c->options(optComponents_, optPos_);
+
+    bp::command_line_parser parser(ac, av);
+    parser.options(opt_);
+    parser.options(optComponents_);
+    parser.positional(optPos_);
+    parser.style(bp::command_line_style::default_style);
+
+    bp::store(parser.run(), vm_);
+    bp::notify(vm_);
+}
+
+MainReturn OptBase::init(const ContextSPtr& context)
+{
+    context_=context;
+    return MainReturn::eGood;
+}
+
+OptBase::~OptBase()
+{}
+
+
+
 }  // namespace ezsh
 

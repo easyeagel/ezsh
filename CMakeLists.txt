@@ -45,7 +45,7 @@ if(GCC)
     set(CReleaseFlags   "-g1 -O2 -DNDEBUG -flto -fuse-linker-plugin -ffat-lto-objects")
     set(CWarningFlags   "-Wall -Wextra -Wpedantic -Wformat=2 -Winit-self -Wno-long-long")
     set(CWarningFlags   "${CWarningFlags} -Wunused-value -Wunused-parameter -Wreturn-type -Wswitch")
-    set(CppFlags        "${CFlags} -std=c++14 -ftemplate-backtrace-limit=1")
+    set(CppFlags        "${CFlags} -std=c++11 -ftemplate-backtrace-limit=1")
     set(CppReleaseFlags "${CReleaseFlags}")
     set(CppWarningFlags "${CWarningFlags} -Wdisabled-optimization -Wold-style-cast -Wdelete-non-virtual-dtor")
     set(CppWarningFlags "${CppWarningFlags} -Wnon-virtual-dtor -Wuninitialized -Wunreachable-code")
@@ -96,7 +96,7 @@ add_subdirectory(libs/sqlite)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #===============================================================================================
 set(ezshSrc
-    ezsh.cpp option.cpp context.cpp
+    ezsh.cpp option.cpp context.cpp fileset.cpp glob.cpp
     cmdRemove.cpp cmdSQLiteImport.cpp cmdWebp.cpp cmdForeach.cpp cmdScript.cpp
 )
 

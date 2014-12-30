@@ -15,6 +15,7 @@
 //
 //=====================================================================================
 
+#pragma once
 
 #include<cstdio>
 
@@ -62,9 +63,22 @@ enum class MainReturn
 {
     eGood=0,
     eParamInvalid=1,
+    eNotAllowed=2,
 };
 
 namespace bp=boost::program_options;
+
+class OptComponent
+{
+public:
+    virtual void longHelp (std::ostream& strm) = 0;
+    virtual void shortHelp(std::ostream& strm) = 0;
+    virtual void options(bp::options_description& opt, bp::positional_options_description& pos) = 0;
+
+    virtual ~OptComponent()=default;
+};
+
+typedef std::shared_ptr<OptComponent> OptComponentSPtr;
 
 class OptBase
 {
@@ -74,45 +88,29 @@ protected:
     {}
 
 public:
-    void help()
-    {
-        std::cerr << opt_ << std::endl;
-    }
+    virtual void help(std::ostream& strm=std::cerr);
+    virtual void parse(int ac, const char* const* av);
+    virtual MainReturn init(const ContextSPtr& context);
+    virtual ~OptBase();
 
-    void parse(int ac, const char* const* av)
-    {
-        bp::command_line_parser parser(ac, av);
-        parser.options(opt_);
-        parser.positional(optPos_);
-        parser.style(bp::command_line_style::default_style);
-
-        bp::store(parser.run(), vm_);
-        bp::notify(vm_);
-    }
+    virtual MainReturn doit() = 0;
 
     const bp::variables_map& mapGet() const
     {
         return vm_;
     }
 
-    virtual MainReturn init(const ContextSPtr& context)
-    {
-        context_=context;
-        return MainReturn::eGood;
-    }
-
-    virtual MainReturn doit() = 0;
-
-    virtual ~OptBase()
-    {}
-
 private:
     bp::variables_map vm_;
 
 protected:
     ContextSPtr context_;
+
     bp::options_description opt_;
     bp::positional_options_description optPos_;
+
+    bp::options_description optComponents_;
+    std::vector<OptComponentSPtr> components_;
 };
 
 template<typename Obj>
