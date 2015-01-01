@@ -22,11 +22,15 @@
 #include<sstream>
 #include<boost/filesystem.hpp>
 #include<SQLiteCpp/SQLiteCpp.h>
+#include<boost/filesystem/fstream.hpp>
 
+#include"encode.hpp"
 #include"option.hpp"
 
 namespace ezsh
 {
+
+namespace bf=boost::filesystem;
 
 class SqlitePacket
 {
@@ -88,7 +92,8 @@ private:
 
     void eleSave(bool dir, const Path& path)
     {
-        const auto& str=path.string();
+        //目录统一使用UTF8保存
+        const auto& str=WCharConverter::to(path.string());
         query_->bind(1, static_cast<const void*>(str.c_str()), str.size());
 
         if(dir)
@@ -102,7 +107,7 @@ private:
 
         const auto fz=boost::filesystem::file_size(path);
         std::string content(static_cast<size_t>(fz), '\0');
-        std::ifstream file(path.c_str());
+        bf::ifstream file(path);
         file.read(const_cast<char*>(content.data()), fz);
 
         query_->bind(2, 0);
@@ -117,7 +122,7 @@ private:
     const char* table()
     {
         if(table_.empty())
-            return "magicRedFiles";
+            return "ezshSQLiteImportFiles";
         return table_.c_str();
     }
 

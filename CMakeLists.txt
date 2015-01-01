@@ -98,7 +98,7 @@ add_subdirectory(libs/sqlite)
 #===============================================================================================
 set(ezshSrc
     ezsh.cpp option.cpp context.cpp fileset.cpp glob.cpp
-    cmdRemove.cpp cmdSQLiteImport.cpp cmdWebp.cpp cmdForeach.cpp cmdScript.cpp
+    cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp cmdScript.cpp
     cmdUnicode.cpp
 )
 
