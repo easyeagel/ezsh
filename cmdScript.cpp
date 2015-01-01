@@ -1,4 +1,4 @@
-//  Copyright [2014] <lgb (LiuGuangBao)>
+﻿//  Copyright [2014] <lgb (LiuGuangBao)>
 //=====================================================================================
 //
 //      Filename:  cmdScript.cpp
@@ -16,6 +16,7 @@
 //=====================================================================================
 //
 
+#include<cctype>
 #include<boost/filesystem.hpp>
 #include<boost/algorithm/string.hpp>
 #include<boost/filesystem/fstream.hpp>

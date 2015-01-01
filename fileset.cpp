@@ -20,29 +20,16 @@
 
 #include<deque>
 #include<locale>
+#include<algorithm>
+
 #include"glob.hpp"
+#include"encode.hpp"
 
 namespace ezsh
 {
 
-namespace details
-{
-    static inline std::string toUtf8(const std::string& src)
-    {
-        return src;
-    }
-
-#ifdef _MSC_VER
-    static inline std::string toUtf8(const std::wstring& src)
-    {
-        std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-        return conv.to_bytes(src);
-    }
-#endif
-}
-
 FileSet::FileUnit::FileUnit(const bf::path& selfIn, const bf::path& baseIn, bool scanedIn)
-    :scaned(scanedIn), self(selfIn), base(baseIn), total(normalize(bf::absolute(selfIn, baseIn)))
+    :scaned(scanedIn), self(selfIn), base(baseIn), total(normalize(baseIn/selfIn))
 {
     refresh();
 }
@@ -80,6 +67,21 @@ bf::path FileSet::FileUnit::normalize(const bf::path& path)
 
     if(ret.empty())
         return ".";
+    return ret;
+}
+
+bf::path FileSet::FileUnit::sub(const bf::path& path, const bf::path& base)
+{
+    auto count=std::distance(base.begin(), base.end());
+    auto itr=path.begin(), end=path.end();
+    while(count-- && itr!=end)
+        ++itr;
+
+    bf::path ret;
+    for(; itr!=end; ++itr)
+        ret /= *itr;
+    if(ret.empty())
+        return bf::path(".");
     return ret;
 }
 
@@ -129,15 +131,19 @@ void FileSet::init(const bp::variables_map& vm)
     itr =vm.find("fsInclude");
     if(itr!=vm.end())
     {
-        auto const t=itr->second.as<std::vector<std::string>>();
-        includes_.assign(t.begin(), t.end());
+        auto const& t=itr->second.as<std::vector<std::string>>();
+        includes_.reserve(t.size());
+        for(const auto& r: t )
+            includes_.emplace_back(WCharConverter::from(r));
     }
 
     itr =vm.find("fsExclude");
     if(itr!=vm.end())
     {
-        auto const t=itr->second.as<std::vector<std::string>>();
-        includes_.assign(t.begin(), t.end());
+        auto const& t=itr->second.as<std::vector<std::string>>();
+        includes_.reserve(t.size());
+        for(const auto& r: t )
+            excludes_.emplace_back(WCharConverter::from(r));
     }
 
     for(const auto& file: files_)
@@ -152,7 +158,7 @@ void FileSet::init(const bp::variables_map& vm)
 bool FileSet::isRight(const FileUnit& fu) const
 {
     const auto& file=fu.self.has_parent_path() ? fu.self.filename() : fu.self;
-    const auto& utf8File=details::toUtf8(file.string());
+    const auto& utf8File=WCharConverter::to(file.string());
 
     for(const auto& g: glob_)
     {
@@ -168,29 +174,21 @@ bool FileSet::isRight(const FileUnit& fu) const
 
 
     //------------------------------------------------------------------
-    const auto& utf8Path=details::toUtf8(fu.self.string());
+    const auto& wpath=WCharConverter::from(fu.self.string());
 
     for(const auto& reg: includes_)
     {
-        if(!std::regex_search(utf8Path, reg))
+        if(!std::regex_search(wpath, reg))
             return false;
     }
 
     for(const auto& reg: excludes_)
     {
-        if(std::regex_search(utf8File, reg))
+        if(std::regex_search(wpath, reg))
             return false;
     }
 
     return true;
-}
-
-void FileSet::scan()
-{
-    if(recursive_==false)
-        return;
-
-
 }
 
 namespace

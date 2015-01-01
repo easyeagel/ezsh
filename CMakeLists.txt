@@ -75,6 +75,7 @@ include_directories(SYSTEM
     ${CMAKE_SOURCE_DIR}/libs/jpeg
     ${CMAKE_SOURCE_DIR}/libs/sqlite
     ${CMAKE_SOURCE_DIR}/libs/webp/src
+    ${CMAKE_SOURCE_DIR}/libs/utf8
     ${CMAKE_CONFIGURATION_HEADER_DIR}
 )
 include_directories(${CMAKE_SOURCE_DIR})
@@ -98,6 +99,7 @@ add_subdirectory(libs/sqlite)
 set(ezshSrc
     ezsh.cpp option.cpp context.cpp fileset.cpp glob.cpp
     cmdRemove.cpp cmdSQLiteImport.cpp cmdWebp.cpp cmdForeach.cpp cmdScript.cpp
+    cmdUnicode.cpp
 )
 
 add_executable(ezsh ${ezshSrc})

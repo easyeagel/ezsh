@@ -45,6 +45,7 @@ public:
         FileUnit(const bf::path& selfIn, const bf::path& baseIn=bf::path(), bool scanedIn=false);
 
         static bf::path normalize(const bf::path& path);
+        static bf::path sub(const bf::path& path, const bf::path& base);
         void refresh();
 
         bool isDir() const
@@ -80,7 +81,37 @@ public:
 
     void init(const bp::variables_map& dict);
 
-    void scan();
+    void scan()
+    {
+        scan([this](FileUnit&& u)
+            {
+                sets_.insert(std::move(u));
+            }
+        );
+    }
+
+    template<typename Call>
+    void scan(Call&& call)
+    {
+        if(recursive_==false)
+            return;
+
+        for(const auto& file: files_)
+        {
+            FileUnit fu(file);
+            if(!fu.isDir())
+                continue;
+            typedef bf::recursive_directory_iterator DirItr;
+            for(auto itr=DirItr(file), end=DirItr(); itr!=end; ++itr)
+            {
+                FileUnit u(FileUnit::sub(itr->path(), file), file);
+                if(!isRight(u))
+                    continue;
+                call(std::move(u));
+            }
+        }
+
+    }
 
     bool isRecursive() const
     {
@@ -113,8 +144,8 @@ private:
     std::vector<std::string> glob_;
     std::vector<std::string> globNot_;
 
-    std::vector<std::regex> includes_;
-    std::vector<std::regex> excludes_;
+    std::vector<std::wregex> includes_;
+    std::vector<std::wregex> excludes_;
 };
 
 }
