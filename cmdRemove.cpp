@@ -16,8 +16,6 @@
 //=====================================================================================
 //
 
-#include<boost/filesystem.hpp>
-
 #include"option.hpp"
 #include"fileset.hpp"
 

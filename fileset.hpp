@@ -20,9 +20,9 @@
 
 #include<set>
 #include<regex>
-#include<boost/filesystem.hpp>
 
 #include"option.hpp"
+#include"filesystem.hpp"
 
 namespace ezsh
 {
@@ -98,11 +98,11 @@ public:
 
         for(const auto& file: files_)
         {
-            FileUnit fu(file);
+            FileUnit fu(pathCreate(file));
             if(!fu.isDir())
                 continue;
             typedef bf::recursive_directory_iterator DirItr;
-            for(auto itr=DirItr(file), end=DirItr(); itr!=end; ++itr)
+            for(auto itr=DirItr(pathCreate(file)), end=DirItr(); itr!=end; ++itr)
             {
                 FileUnit u(FileUnit::sub(itr->path(), file), file);
                 if(!isRight(u))

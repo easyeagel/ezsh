@@ -20,12 +20,11 @@
 #include<vector>
 #include<fstream>
 #include<sstream>
-#include<boost/filesystem.hpp>
 #include<SQLiteCpp/SQLiteCpp.h>
-#include<boost/filesystem/fstream.hpp>
 
 #include"encode.hpp"
 #include"option.hpp"
+#include"filesystem.hpp"
 
 namespace ezsh
 {
@@ -61,7 +60,7 @@ public:
         {
             eleSave(true, dir);
 
-            DirRItr itr(dir);
+            DirRItr itr(pathCreate(dir));
             DirRItr const end;
             for(; itr!=end; ++itr)
             {
