@@ -1,4 +1,4 @@
-//  Copyright [2014] <lgb (LiuGuangBao)>
+﻿//  Copyright [2014] <lgb (LiuGuangBao)>
 //=====================================================================================
 //
 //      Filename:  fileset.cpp
@@ -148,7 +148,7 @@ void FileSet::init(const bp::variables_map& vm)
 
     for(const auto& file: files_)
     {
-        FileUnit fu(file);
+        FileUnit fu(pathCreate(file));
         if(!isRight(fu))
             continue;
         sets_.insert(std::move(fu));
@@ -157,37 +157,43 @@ void FileSet::init(const bp::variables_map& vm)
 
 bool FileSet::isRight(const FileUnit& fu) const
 {
-    const auto& file=fu.self.has_parent_path() ? fu.self.filename() : fu.self;
-    const auto& utf8File=WCharConverter::to(file.string());
+	if (!globNot_.empty() || !glob_.empty())
+	{
+		const auto& file = fu.self.has_parent_path() ? fu.self.filename() : fu.self;
+		const auto& utf8File = WCharConverter::to(file.native());
 
-    for(const auto& g: glob_)
-    {
-        if(!Glob::match(g, utf8File))
-            return false;
-    }
+		for (const auto& g : glob_)
+		{
+			if (!Glob::match(g, utf8File))
+				return false;
+		}
 
-    for(const auto& g: globNot_)
-    {
-        if(Glob::match(g, utf8File))
-            return false;
-    }
-
+		for (const auto& g : globNot_)
+		{
+			if (Glob::match(g, utf8File))
+				return false;
+		}
+	}
+  
 
     //------------------------------------------------------------------
-    const auto& wpath=WCharConverter::from(fu.self.string());
+	if (!includes_.empty() || !excludes_.empty())
+	{
+		const auto& wpath = WCharConverter::from(fu.self.native());
 
-    for(const auto& reg: includes_)
-    {
-        if(!std::regex_search(wpath, reg))
-            return false;
-    }
+		for (const auto& reg : includes_)
+		{
+			if (!std::regex_search(wpath, reg))
+				return false;
+		}
 
-    for(const auto& reg: excludes_)
-    {
-        if(std::regex_search(wpath, reg))
-            return false;
-    }
-
+		for (const auto& reg : excludes_)
+		{
+			if (std::regex_search(wpath, reg))
+				return false;
+		}
+	}
+	
     return true;
 }
 
