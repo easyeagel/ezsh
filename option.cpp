@@ -74,16 +74,17 @@ void CmdBase::help(std::ostream& strm)
 
 void CmdBase::parse(int ac, const char* const* av)
 {
+    bp::options_description optComponents;
     for(auto& c: components_)
-        c->options(optComponents_, optPos_);
+        c->options(optComponents, optPos_);
 
     bp::command_line_parser parser(ac, av);
-    if(optComponents_.options().empty())
+    if(optComponents.options().empty())
     {
         parser.options(opt_);
     } else {
         optAll_.add(opt_);
-        optAll_.add(optComponents_);
+        optAll_.add(optComponents);
         parser.options(optAll_);
     }
     parser.positional(optPos_);
@@ -91,6 +92,9 @@ void CmdBase::parse(int ac, const char* const* av)
 
     bp::store(parser.run(), vm_);
     bp::notify(vm_);
+
+    for(auto& call: afterParseCalls_)
+        call(vm_);
 }
 
 MainReturn CmdBase::init(const ContextSPtr& context)

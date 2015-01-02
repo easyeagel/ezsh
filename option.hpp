@@ -20,10 +20,12 @@
 #include<cstdio>
 
 #include<map>
+#include<list>
 #include<memory>
 #include<thread>
 #include<utility>
 #include<iostream>
+#include<initializer_list>
 #include<boost/program_options.hpp>
 #include<boost/asio/io_service.hpp>
 
@@ -88,6 +90,9 @@ protected:
     {}
 
 public:
+    typedef bp::variables_map VarMap;
+    typedef std::function<void (const VarMap&)> AfterParseCall;
+
     virtual void help(std::ostream& strm=std::cerr);
     virtual void parse(int ac, const char* const* av);
     virtual MainReturn init(const ContextSPtr& context);
@@ -95,24 +100,33 @@ public:
 
     virtual MainReturn doit() = 0;
 
-    const bp::variables_map& mapGet() const
+    const VarMap& mapGet() const
     {
         return vm_;
     }
 
+    template<typename Call>
+    void afterParseCall(Call&& call)
+    {
+        afterParseCalls_.emplace_back(std::move(call));
+    }
+
+    const ContextSPtr& contextGet() const
+    {
+        return context_;
+    }
+
 private:
-    bp::variables_map vm_;
+    VarMap vm_;
+    bp::options_description optAll_;
+    std::list<AfterParseCall> afterParseCalls_;
 
 protected:
     ContextSPtr context_;
 
     bp::options_description opt_;
     bp::positional_options_description optPos_;
-
-    bp::options_description optComponents_;
     std::vector<OptionComponentSPtr> components_;
-
-    bp::options_description optAll_;
 };
 
 template<typename Obj>
@@ -133,6 +147,64 @@ public:
         return "core";
     }
 
+};
+
+class OptionOneAndOnly
+{
+public:
+    OptionOneAndOnly()=default;
+
+    void add(std::initializer_list<std::string> list)
+    {
+        add(list.begin(), list.end());
+    }
+
+    template<typename Itr>
+    void add(Itr b, Itr e)
+    {
+        opts_.insert(opts_.end(), b, e);
+    }
+
+    void doit(CmdBase& cb)
+    {
+        cb.afterParseCall(std::bind(&OptionOneAndOnly::check, this, std::placeholders::_1));
+    }
+
+    const std::string& oneGet() const
+    {
+        return *one_;
+    }
+
+private:
+    void check(const CmdBase::VarMap& vm)
+    {
+        size_t count=0;
+        for(const auto& opt: opts_)
+        {
+            const auto n=(vm.find(opt)==vm.end()? 0 : 1);
+            if(n==0)
+                continue;
+            count += n;
+            one_=std::addressof(opt);
+        }
+
+        if(count!=1)
+        {
+            std::string msg;
+            for(const auto& opt: opts_)
+            {
+                msg += opt;
+                msg += ", ";
+            }
+
+            msg += "need one and only one";
+            throw bp::error(msg);
+        }
+    }
+
+private:
+    std::string const* one_=nullptr;
+    std::vector<std::string> opts_;
 };
 
 typedef std::function<std::unique_ptr<CmdBase>()> CmdCreate;
