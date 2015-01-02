@@ -85,7 +85,7 @@ private:
     {
         bf::ifstream strm;
         const auto result=bomUtf8Check(file, strm);
-        if(!strm)
+        if(strm.is_open()==false)
             return;
 
         context_->stdCOut()
@@ -97,7 +97,7 @@ private:
     {
         bf::ifstream strm;
         const auto result=bomUtf8Check(file, strm);
-        if(!strm)
+        if(strm.is_open()==false)
             return;
 
         if(result.second==false)
@@ -126,7 +126,7 @@ private:
     {
         bf::ifstream strm;
         const auto result=bomUtf8Check(file, strm);
-        if(!strm)
+        if(strm.is_open()==false)
             return;
 
         if(result.second==false)
@@ -155,17 +155,23 @@ private:
     {
         if(!file.isExist())
         {
-            context_->stdCErr() << WCharConverter::to(file.total.string()) << ": notExist" << std::endl;
+            context_->stdCErr() << file.total << ": notExist" << std::endl;
             return std::make_pair(false, false);
         }
 
         boost::system::error_code ec;
         if(file.isDir())
+        {
+            context_->stdCErr() << file.total << ": isDir" << std::endl;
             return std::make_pair(false, false);
+        }
 
         strm.open(file.total);
         if(!strm)
+        {
+            context_->stdCErr() << file.total << ": openFailed" << std::endl;
             return std::make_pair(false, false);
+        }
 
         std::istreambuf_iterator<char> const end;
         std::istreambuf_iterator<char> const strmItr(strm);

@@ -42,10 +42,10 @@ class FileSet
 public:
     struct FileUnit
     {
-        FileUnit(const bf::path& selfIn, const bf::path& baseIn=bf::path(), bool scanedIn=false);
+        FileUnit(const Path& selfIn, const Path& baseIn=Path(), bool scanedIn=false);
 
-        static bf::path normalize(const bf::path& path);
-        static bf::path sub(const bf::path& path, const bf::path& base);
+        static Path normalize(const Path& path);
+        static Path sub(const Path& path, const Path& base);
         void refresh();
 
         bool isDir() const
@@ -60,9 +60,9 @@ public:
 
         bool scaned;
 
-        bf::path self;
-        bf::path base;
-        bf::path total;
+        Path self;
+        Path base;
+        Path total;
         bf::file_status status;
 
         bool operator<(const FileUnit& o) const
@@ -98,11 +98,11 @@ public:
 
         for(const auto& file: files_)
         {
-            FileUnit fu(pathCreate(file));
+            FileUnit fu(file);
             if(!fu.isDir())
                 continue;
             typedef bf::recursive_directory_iterator DirItr;
-            for(auto itr=DirItr(pathCreate(file)), end=DirItr(); itr!=end; ++itr)
+            for(auto itr=DirItr(file), end=DirItr(); itr!=end; ++itr)
             {
                 FileUnit u(FileUnit::sub(itr->path(), file), file);
                 if(!isRight(u))

@@ -72,6 +72,47 @@ static inline bf::path pathCreate(const std::wstring& s)
     return details::PathCreate<bf::path::value_type>::doit(s);
 }
 
+class Path: public bf::path
+{
+public:
+    Path()=default;
+
+    Path(const std::string& s)
+        :bf::path(pathCreate(s).generic_string<bf::path::string_type>())
+    {}
+
+    Path(const std::wstring& s)
+        :bf::path(pathCreate(s).generic_string<bf::path::string_type>())
+    {}
+
+    Path(const bf::path& path)
+        :bf::path(path.generic_string<bf::path::string_type>())
+    {}
+
+    Path(const char* s)
+        :bf::path(pathCreate(s).generic_string<bf::path::string_type>())
+    {}
+
+    Path(const wchar_t* s)
+        :bf::path(pathCreate(s).generic_string<bf::path::string_type>())
+    {}
+
+    void generalize()
+    {
+        *this=this->generic_string<bf::path::string_type>();
+    }
+
+    bf::path& path()
+    {
+        return static_cast<bf::path&>(*this);
+    }
+
+    const bf::path& path() const
+    {
+        return static_cast<const bf::path&>(*this);
+    }
+};
+
 }  // namespace ezsh
 
 

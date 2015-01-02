@@ -28,7 +28,7 @@
 namespace ezsh
 {
 
-FileSet::FileUnit::FileUnit(const bf::path& selfIn, const bf::path& baseIn, bool scanedIn)
+FileSet::FileUnit::FileUnit(const Path& selfIn, const Path& baseIn, bool scanedIn)
     :scaned(scanedIn), self(selfIn), base(baseIn), total(normalize(baseIn/selfIn))
 {
     refresh();
@@ -40,13 +40,13 @@ void FileSet::FileUnit::refresh()
     status=bf::status(total, ec);
 }
 
-bf::path FileSet::FileUnit::normalize(const bf::path& path)
+Path FileSet::FileUnit::normalize(const Path& path)
 {
     if(path.empty())
         return path;
 
     //删除路径中多余的 . ..
-    std::deque<bf::path> stk;
+    std::deque<Path> stk;
     for(auto itr=path.begin(), end=path.end(); itr!=end; ++itr)
     {
         if(*itr==".")
@@ -61,7 +61,7 @@ bf::path FileSet::FileUnit::normalize(const bf::path& path)
         stk.push_back(*itr);
     }
 
-    bf::path ret;
+    Path ret;
     for(auto& p: stk)
         ret /= p;
 
@@ -70,18 +70,18 @@ bf::path FileSet::FileUnit::normalize(const bf::path& path)
     return ret;
 }
 
-bf::path FileSet::FileUnit::sub(const bf::path& path, const bf::path& base)
+Path FileSet::FileUnit::sub(const Path& path, const Path& base)
 {
     auto count=std::distance(base.begin(), base.end());
     auto itr=path.begin(), end=path.end();
     while(count-- && itr!=end)
         ++itr;
 
-    bf::path ret;
+    Path ret;
     for(; itr!=end; ++itr)
         ret /= *itr;
     if(ret.empty())
-        return bf::path(".");
+        return Path(".");
     return ret;
 }
 
@@ -148,7 +148,7 @@ void FileSet::init(const bp::variables_map& vm)
 
     for(const auto& file: files_)
     {
-        FileUnit fu(pathCreate(file));
+        FileUnit fu(file);
         if(!isRight(fu))
             continue;
         sets_.insert(std::move(fu));
@@ -159,7 +159,7 @@ bool FileSet::isRight(const FileUnit& fu) const
 {
 	if (!globNot_.empty() || !glob_.empty())
 	{
-		const auto& file = fu.self.has_parent_path() ? fu.self.filename() : fu.self;
+		const auto& file = fu.self.has_parent_path() ? fu.self.filename() : fu.self.path();
 		const auto& utf8File = WCharConverter::to(file.native());
 
 		for (const auto& g : glob_)
