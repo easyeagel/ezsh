@@ -28,6 +28,8 @@
 #include<iostream>
 #include<boost/variant.hpp>
 
+#include"filesystem.hpp"
+
 namespace ezsh
 {
 
@@ -42,25 +44,69 @@ class Context;
 class ContextStack;
 typedef std::shared_ptr<Context> ContextSPtr;
 
-namespace details
+class StdStream
 {
-    class StdStream
+public:
+    StdStream(std::wostream& w)
+        :wstrm_(w)
+    {}
+
+    template<typename Value>
+    StdStream& operator<<(const Value& val)
     {
-    public:
-        StdStream(std::ostream& stm)
-            :strm_(std::addressof(stm))
-        {}
+        wstrm_ << val;
+        return *this;
+    }
 
-        template<typename V>
-        std::ostream& operator<<(const V& v)
-        {
-            return *strm_ << v;
-        }
+    StdStream& operator<<(char c)
+    {
+        wstrm_ << WCharConverter::from(c);
+        return *this;
+    }
 
-    private:
-        std::ostream* strm_;
-    };
-}
+    StdStream& operator<<(const char* str)
+    {
+        wstrm_ << WCharConverter::from(str);
+        return *this;
+    }
+
+    StdStream& operator<<(const std::string& str)
+    {
+        wstrm_ << WCharConverter::from(str);
+        return *this;
+    }
+
+    StdStream& operator<<( std::wostream& (*func)(std::wostream&) )
+    {
+        wstrm_ << func;
+        return *this;
+    }
+
+    StdStream& operator<<(const Path& path)
+    {
+        wstrm_ << WCharConverter::from(path.native());
+        return *this;
+    }
+
+private:
+    std::wostream& wstrm_;
+};
+
+class StdOutStream: public StdStream
+{
+public:
+    StdOutStream()
+        :StdStream(std::wcout)
+    {}
+};
+
+class StdErrStream: public StdStream
+{
+public:
+    StdErrStream()
+        :StdStream(std::wcerr)
+    {}
+};
 
 class Context
 {
@@ -77,19 +123,22 @@ public:
         return front_;
     }
 
-    details::StdStream stdCOut()
+    StdOutStream& stdOut()
     {
-        return details::StdStream(std::cout);
+        return stdOut_;
     }
 
-    details::StdStream stdCErr()
+    StdErrStream& stdErr()
     {
-        return details::StdStream(std::cerr);
+        return stdErr_;
     }
 
 private:
     ContextSPtr front_;
     std::map<std::string, Variable> variables_;
+
+    StdOutStream stdOut_;
+    StdErrStream stdErr_;
 };
 
 class ContextStack

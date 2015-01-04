@@ -218,7 +218,7 @@ public:
             const bool exist=bf::exists(file);
             if(exist==false)
             {
-                context_->stdCErr() << file << ": not exist" << std::endl;
+                stdErr() << file << ": not exist" << std::endl;
                 isExist=false;
                 continue;
             }
@@ -234,7 +234,7 @@ public:
             const auto ok=s.load();
             if(ok==false)
             {
-                context_->stdCErr() << file << ": load failed" << std::endl;
+                stdErr() << file << ": load failed" << std::endl;
                 return MainReturn::eParamInvalid;
             }
         }

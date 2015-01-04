@@ -81,7 +81,7 @@ public:
         inputCollect();
         if(units_.empty())
         {
-            context_->stdCErr() << "no input valid" << std::endl;
+            stdErr() << "no input valid" << std::endl;
             return MainReturn::eParamInvalid;
         }
 
@@ -98,7 +98,7 @@ public:
 
         if(outIsExist && !outIsDir)
         {
-            context_->stdCErr() << out << ": exist but not directory" << std::endl;
+            stdErr() << out << ": exist but not directory" << std::endl;
             return MainReturn::eParamInvalid;
         }
 
@@ -124,7 +124,7 @@ private:
         {
             if(!bf::exists(in))
             {
-                context_->stdCErr() << in << ": not exist" << std::endl;
+                stdErr() << in << ": not exist" << std::endl;
                 continue;
             }
 
@@ -155,7 +155,7 @@ private:
             bf::create_directories(pp, ec);
             if(ec)
             {
-                context_->stdCErr() << "mkdir:" << pp << ":error: " << ec.message() << std::endl;
+                stdErr() << "mkdir:" << pp << ":error: " << ec.message() << std::endl;
                 return;
             }
         }
@@ -196,6 +196,7 @@ private:
     }
 
 private:
+    ///@todo 使用fileset执行文件选择
     bool concurrency_=false;
     unsigned quality_=50;
     unsigned alphaQuality_=50;

@@ -18,6 +18,7 @@
 
 #include<vector>
 #include<string>
+#include<clocale>
 
 #include"encode.hpp"
 #include"option.hpp"
@@ -65,6 +66,8 @@ int myMain(int argc, const char* argv[])
 //Windows系统使用wchar_t，并把其转换为utf8
 int wmain(int argc, const wchar_t* argv[])
 {
+    std::setlocale(LC_CTYPE, "");
+
     std::vector<std::string> args;
     for(int i=0; i<argc; ++i)
 		args.emplace_back(ezsh::WCharConverter::to(argv[i], std::wcslen(argv[i])));
@@ -81,6 +84,7 @@ int wmain(int argc, const wchar_t* argv[])
 //非Windows系统假设默认为utf8
 int main(int argc, const char* argv[])
 {
+    std::setlocale(LC_CTYPE, "");
     return ezsh::myMain(argc, argv);
 }
 

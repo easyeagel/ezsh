@@ -88,7 +88,7 @@ private:
         if(strm.is_open()==false)
             return;
 
-        context_->stdCOut()
+        stdOut()
             << WCharConverter::to(file.total.string())
             << (result.second ? ": valid" : ": invalid") << std::endl;
     }
@@ -102,13 +102,13 @@ private:
 
         if(result.second==false)
         {
-            contextGet()->stdCErr() << "utf8-invalid: " << file.total << std::endl;
+            stdErr() << "utf8-invalid: " << file.total << std::endl;
             return;
         }
 
         if(result.first==true)
         {
-            contextGet()->stdCErr() << "utf8-BOM: " << file.total << std::endl;
+            stdErr() << "utf8-BOM: " << file.total << std::endl;
             return;
         }
 
@@ -131,13 +131,13 @@ private:
 
         if(result.second==false)
         {
-            contextGet()->stdCErr() << "utf8-invalid: " << file.total << std::endl;
+            stdErr() << "utf8-invalid: " << file.total << std::endl;
             return;
         }
 
         if(result.first==false)
         {
-            contextGet()->stdCErr() << "utf8-no-BOM: " << file.total << std::endl;
+            stdErr() << "utf8-no-BOM: " << file.total << std::endl;
             return;
         }
 
@@ -155,21 +155,21 @@ private:
     {
         if(!file.isExist())
         {
-            context_->stdCErr() << file.total << ": notExist" << std::endl;
+            stdErr() << file.total << ": notExist" << std::endl;
             return std::make_pair(false, false);
         }
 
         boost::system::error_code ec;
         if(file.isDir())
         {
-            context_->stdCErr() << file.total << ": isDir" << std::endl;
+            stdErr() << file.total << ": isDir" << std::endl;
             return std::make_pair(false, false);
         }
 
         strm.open(file.total);
         if(!strm)
         {
-            context_->stdCErr() << file.total << ": openFailed" << std::endl;
+            stdErr() << file.total << ": openFailed" << std::endl;
             return std::make_pair(false, false);
         }
 

@@ -116,6 +116,15 @@ public:
         return context_;
     }
 
+    StdOutStream& stdOut() const
+    {
+        return contextGet()->stdOut();
+    }
+
+    StdErrStream& stdErr() const
+    {
+        return contextGet()->stdErr();
+    }
 private:
     VarMap vm_;
     bp::options_description optAll_;

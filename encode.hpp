@@ -49,6 +49,13 @@ namespace details
             return str;
         }
 
+        static wchar_t from(char c)
+        {
+            wchar_t ret=0;
+            utf8::utf8to16(&c, &c+1, &ret);
+            return ret;
+        }
+
         static std::string to(const wchar_t* buf, size_t n)
         {
             std::string ret;
@@ -86,6 +93,13 @@ namespace details
         static std::wstring from(const std::wstring& str)
         {
             return str;
+        }
+
+        static wchar_t from(char c)
+        {
+            wchar_t ret=0;
+            utf8::utf8to32(&c, &c+1, &ret);
+            return ret;
         }
 
         static std::string to(const wchar_t* buf, size_t n)

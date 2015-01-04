@@ -309,7 +309,7 @@ namespace ezsh
         {
             auto const ret=check_glob(pattern);
             return ret;
-        } catch(glob_error& ge) {
+        } catch(glob_error& ) {
             return false;
         }
     }

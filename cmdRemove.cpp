@@ -56,7 +56,7 @@ public:
             {
                 if(force)
                     continue;
-                context_->stdCErr() << file.total << ": not exist" << std::endl;
+                stdErr() << file.total << ": not exist" << std::endl;
                 continue;
             }
 
@@ -65,7 +65,7 @@ public:
             {
                 bf::remove(file.total, ec);
                 if(ec && !force)
-                    context_->stdCErr() << file.total << ": " << ec.message() << std::endl;
+                    stdErr() << file.total << ": " << ec.message() << std::endl;
                 continue;
             }
 
@@ -73,13 +73,13 @@ public:
             {
                 bf::remove_all(file.total, ec);
                 if(ec && !force)
-                    context_->stdCErr() << file.total << ": " << ec.message() << std::endl;
+                    stdErr() << file.total << ": " << ec.message() << std::endl;
                 continue;
             }
 
             bf::remove(file.total, ec);
             if(ec && !force)
-                context_->stdCErr() << file.total << ": " << ec.message() << std::endl;
+                stdErr() << file.total << ": " << ec.message() << std::endl;
         }
 
         return MainReturn::eGood;
