@@ -125,6 +125,12 @@ public:
     {
         return contextGet()->stdErr();
     }
+
+    void componentPush(const OptionComponentSPtr& com)
+    {
+        components_.push_back(com);
+    }
+
 private:
     VarMap vm_;
     bp::options_description optAll_;
@@ -138,12 +144,12 @@ protected:
     std::vector<OptionComponentSPtr> components_;
 };
 
-template<typename Obj>
-class CmdBaseT: public CmdBase
+template<typename Obj, typename Base=CmdBase>
+class CmdBaseT: public Base
 {
 public:
     CmdBaseT(const char* msg)
-        :CmdBase(msg)
+        :Base(msg)
     {}
 
     static std::unique_ptr<CmdBase> create()

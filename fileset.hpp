@@ -29,6 +29,39 @@ namespace ezsh
 
 namespace bf=boost::filesystem;
 
+struct FileUnit
+{
+    FileUnit(const Path& selfIn, const Path& baseIn=Path(), bool scanedIn=false);
+
+    static Path normalize(const Path& path);
+    static Path sub(const Path& path, const Path& base);
+    void refresh();
+
+    bool isDir() const
+    {
+        return status.type()==bf::file_type::directory_file;
+    }
+
+    bool isExist() const
+    {
+        return status.type()!=bf::file_type::file_not_found;
+    }
+
+    bool scaned;
+
+    Path self;
+    Path base;
+    Path total;
+    uint64_t size=0;
+    std::time_t ctime=0;
+    bf::file_status status;
+
+    bool operator<(const FileUnit& o) const
+    {
+        return total<o.total;
+    }
+};
+
 class FileSet
 {
     class Component: public OptionComponent
@@ -40,37 +73,6 @@ class FileSet
     };
 
 public:
-    struct FileUnit
-    {
-        FileUnit(const Path& selfIn, const Path& baseIn=Path(), bool scanedIn=false);
-
-        static Path normalize(const Path& path);
-        static Path sub(const Path& path, const Path& base);
-        void refresh();
-
-        bool isDir() const
-        {
-            return status.type()==bf::file_type::directory_file;
-        }
-
-        bool isExist() const
-        {
-            return status.type()!=bf::file_type::file_not_found;
-        }
-
-        bool scaned;
-
-        Path self;
-        Path base;
-        Path total;
-        bf::file_status status;
-
-        bool operator<(const FileUnit& o) const
-        {
-            return total<o.total;
-        }
-    };
-
     static OptionComponentSPtr componentGet()
     {
         static OptionComponentSPtr ptr;
@@ -78,6 +80,8 @@ public:
             ptr.reset(new Component);
         return ptr;
     }
+
+    void config(CmdBase& cmd);
 
     void init(const bp::variables_map& dict);
 
@@ -136,6 +140,10 @@ public:
     }
 
 private:
+    void afterParse(const bp::variables_map& vm);
+    void sizeEqual(const std::vector<std::string>& param, bool n);
+
+private:
     bool recursive_=false;
     std::set<FileUnit> sets_;
 
@@ -146,6 +154,32 @@ private:
 
     std::vector<std::wregex> includes_;
     std::vector<std::wregex> excludes_;
+
+    std::vector<std::function<bool (const FileUnit&)>> predications_;
+};
+
+template<typename Base=CmdBase>
+class FileSetCmdBase: public Base
+{
+public:
+    FileSetCmdBase(const char* msg)
+        :Base(msg)
+    {
+        files_.config(*this);
+    }
+
+    FileSet& fileGet()
+    {
+        return files_;
+    }
+
+    const FileSet& fileGet() const
+    {
+        return files_;
+    }
+
+private:
+    FileSet files_;
 };
 
 }

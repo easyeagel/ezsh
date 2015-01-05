@@ -16,6 +16,8 @@
 //=====================================================================================
 //
 
+#include<ctime>
+
 #include"option.hpp"
 #include"fileset.hpp"
 
@@ -24,14 +26,16 @@ namespace ezsh
 
 namespace bf=boost::filesystem;
 
-class CmdList:public CmdBaseT<CmdList>
+class CmdList:public CmdBaseT<CmdList, FileSetCmdBase<>>
 {
-    typedef CmdBaseT<CmdList> BaseThis;
+    typedef CmdBaseT<CmdList, FileSetCmdBase> BaseThis;
 public:
     CmdList()
         :BaseThis("list - list file or dir")
     {
-        components_.push_back(FileSet::componentGet());
+        opt_.add_options()
+            ("noError", "do not report error")
+        ;
     }
 
     static const char* nameGet()
@@ -41,24 +45,25 @@ public:
 
     MainReturn doit() override
     {
+        auto& files=fileGet();
         const auto& vm=mapGet();
 
-        files_.init(vm);
-
-        for(const auto& file: files_.setGet())
+        files.init(vm);
+        const bool noError=vm.count("noError") ? true : false;
+        for(const auto& file: files.setGet())
         {
-            if(!file.isExist())
+            if(!file.isExist() && !noError)
             {
                 stdErr() << file.total << ": notExist" << std::endl;
                 continue;
             }
 
-            stdOut() << file.total << std::endl;
+            filePrint(file);
         }
 
-        files_.scan([this](const FileSet::FileUnit& u)
+        files.scan([this](const FileUnit& u)
             {
-                stdOut() << u.total << std::endl;
+                filePrint(u);
             }
         );
 
@@ -66,7 +71,17 @@ public:
     }
 
 private:
-    FileSet files_;
+    void filePrint(const FileUnit& u)
+    {
+        std::tm tm;
+#ifndef _MSC_VER
+        ::localtime_r(&u.ctime, &tm);
+#else
+        ::localtime_s(&tm, &u.ctime);
+#endif
+        stdOut() << tm << " " << u.total << std::endl;
+    }
+
 };
 
 namespace

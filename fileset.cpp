@@ -18,6 +18,8 @@
 
 #include"fileset.hpp"
 
+#include<cctype>
+
 #include<deque>
 #include<locale>
 #include<algorithm>
@@ -28,19 +30,27 @@
 namespace ezsh
 {
 
-FileSet::FileUnit::FileUnit(const Path& selfIn, const Path& baseIn, bool scanedIn)
+FileUnit::FileUnit(const Path& selfIn, const Path& baseIn, bool scanedIn)
     :scaned(scanedIn), self(selfIn), base(baseIn), total(normalize(baseIn/selfIn))
 {
     refresh();
 }
 
-void FileSet::FileUnit::refresh()
+void FileUnit::refresh()
 {
     boost::system::error_code ec;
     status=bf::status(total, ec);
+    if(status.type()==bf::file_type::file_not_found)
+        return;
+
+    ec.clear();
+    size=bf::file_size(total, ec);
+    if(size==static_cast<uint64_t>(-1) || ec)
+        size=0;
+    ctime=bf::last_write_time(total);
 }
 
-Path FileSet::FileUnit::normalize(const Path& path)
+Path FileUnit::normalize(const Path& path)
 {
     if(path.empty())
         return path;
@@ -70,7 +80,7 @@ Path FileSet::FileUnit::normalize(const Path& path)
     return ret;
 }
 
-Path FileSet::FileUnit::sub(const Path& path, const Path& base)
+Path FileUnit::sub(const Path& path, const Path& base)
 {
     auto count=std::distance(base.begin(), base.end());
     auto itr=path.begin(), end=path.end();
@@ -85,14 +95,113 @@ Path FileSet::FileUnit::sub(const Path& path, const Path& base)
     return ret;
 }
 
+static uint64_t sizeRead(const std::string& input)
+{
+    uint64_t const K=1024, M=1024*1024, G=1024*1024*1024;
+
+    auto msg=input.c_str();
+
+    const char* str=nullptr;
+    unsigned n=0, k=0, m=0, g=0;
+    for(; *msg; msg += 1)
+    {
+        if(*msg>='0' && *msg<='9')
+        {
+            if(str==nullptr)
+                str=msg;
+            continue;
+        } else if(std::isspace(*msg)) {
+            continue;
+        } else {
+            if(str==nullptr)
+                throw bp::error("invalid file size pattern");
+
+            switch(*msg)
+            {
+                case 'G':
+                case 'g':
+                    g=std::strtoul(str, nullptr, 10);
+                    break;
+                case 'M':
+                case 'm':
+                    m=std::strtoul(str, nullptr, 10);
+                    break;
+                case 'K':
+                case 'k':
+                    k=std::strtoul(str, nullptr, 10);
+                    break;
+            }
+
+            str=nullptr;
+        }
+    }
+
+    if(str!=nullptr)
+        n=std::strtoul(str, nullptr, 0);
+
+    return g*G + m*M + k*K + n;
+}
+
+void FileSet::sizeEqual(const std::vector<std::string>& sizes, bool n)
+{
+    std::vector<uint64_t> sz;
+    for(auto s: sizes)
+        sz.push_back(sizeRead(s));
+
+    predications_.emplace_back([sz, n](const FileUnit& u)
+        {
+            return std::any_of(sz.begin(), sz.end(), [&u, n](uint64_t s){ return n ? s!=u.size : s==u.size; });
+        }
+    );
+}
+
+void FileSet::afterParse(const bp::variables_map& vm)
+{
+    auto itr=vm.find("fsSizeEqual");
+    if(itr!=vm.end())
+        sizeEqual(itr->second.as<std::vector<std::string>>(), false);
+
+    itr=vm.find("fsSizeNotEqual");
+    if(itr!=vm.end())
+        sizeEqual(itr->second.as<std::vector<std::string>>(), true);
+
+#define MD(CppParam, CppOpt) \
+    itr=vm.find(#CppParam); \
+    if(itr!=vm.end()) \
+    { \
+        const auto sz=sizeRead(itr->second.as<std::string>()); \
+        predications_.emplace_back([sz](const FileUnit& u) \
+            { \
+                return u.size CppOpt sz; \
+            } \
+        ); \
+    }
+
+    MD(fsSizeLess,         <  )
+    MD(fsSizeGreater,      >  )
+    MD(fsSizeLessEqual,    <= )
+    MD(fsSizeGreaterEqual, >= )
+
+#undef MD
+}
+
 void FileSet::Component::options(bp::options_description& opt, bp::positional_options_description& pos)
 {
     opt.add_options()
-        ("fsFile",      bp::value<std::vector<std::string>>(), "files to set")
-        ("fsGlob",      bp::value<std::vector<std::string>>(), "glob parttern include in set")
-        ("fsGlobNot",   bp::value<std::vector<std::string>>(), "glob parttern not include in set")
-        ("fsInclude",   bp::value<std::vector<std::string>>(), "regex parttern included in set")
-        ("fsExclude",   bp::value<std::vector<std::string>>(), "regex parttern excluded from set")
+        ("fsFile",              bp::value<std::vector<std::string>>(), "files to set")
+        ("fsGlob",              bp::value<std::vector<std::string>>(), "glob parttern include in set")
+        ("fsGlobNot",           bp::value<std::vector<std::string>>(), "glob parttern not include in set")
+        ("fsInclude",           bp::value<std::vector<std::string>>(), "regex parttern included in set")
+        ("fsExclude",           bp::value<std::vector<std::string>>(), "regex parttern excluded from set")
+
+        ("fsSizeEqual",         bp::value<std::vector<std::string>>(), "size equal to, may many times")
+        ("fsSizeNotEqual",      bp::value<std::vector<std::string>>(), "size not equal to, may many times")
+
+        ("fsSizeLess",          bp::value<std::string>(), "size less than")
+        ("fsSizeGreater",       bp::value<std::string>(), "size greater than")
+        ("fsSizeLessEqual",     bp::value<std::string>(), "size less or equal to")
+        ("fsSizeGreaterEqual",  bp::value<std::string>(), "size greater or equal to")
+
         ("fsRecursive",                                        "operate recursively")
     ;
     pos.add("fsFile", -1);
@@ -193,8 +302,20 @@ bool FileSet::isRight(const FileUnit& fu) const
 				return false;
 		}
 	}
+
+    for(const auto& prd: predications_)
+    {
+        if(!prd(fu))
+            return false;
+    }
 	
     return true;
+}
+
+void FileSet::config(CmdBase& cmd)
+{
+    cmd.componentPush(componentGet());
+    cmd.afterParseCall(std::bind(&FileSet::afterParse, this, std::placeholders::_1));
 }
 
 namespace

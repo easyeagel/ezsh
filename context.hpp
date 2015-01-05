@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include<ctime>
 #include<cassert>
 
 #include<map>
@@ -85,6 +86,14 @@ public:
     StdStream& operator<<(const Path& path)
     {
         wstrm_ << WCharConverter::from(path.native());
+        return *this;
+    }
+
+    StdStream& operator<<(const std::tm& tm)
+    {
+        char buf[256];
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d_%H:%M:%S", &tm);
+        *this << buf;
         return *this;
     }
 

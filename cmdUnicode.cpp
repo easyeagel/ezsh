@@ -29,9 +29,9 @@ namespace ezsh
 
 namespace bf=boost::filesystem;
 
-class CmdUnicode:public CmdBaseT<CmdUnicode>
+class CmdUnicode:public CmdBaseT<CmdUnicode, FileSetCmdBase<>>
 {
-    typedef CmdBaseT<CmdUnicode> BaseThis;
+    typedef CmdBaseT<CmdUnicode, FileSetCmdBase> BaseThis;
 public:
     CmdUnicode()
         :BaseThis("unicode - unicode file or dir")
@@ -43,7 +43,6 @@ public:
             (opts[2], "check files utf8 encode")
         ;
 
-        components_.push_back(FileSet::componentGet());
         modeOnly_.add(std::begin(opts), std::end(opts));
         modeOnly_.doit(*this);
     }
@@ -56,10 +55,11 @@ public:
     MainReturn doit() override
     {
         const auto& vm=mapGet();
+        auto& files=fileGet();
 
-        files_.init(vm);
+        files.init(vm);
 
-        void (CmdUnicode::* fileOne)(const FileSet::FileUnit& )=nullptr;
+        void (CmdUnicode::* fileOne)(const FileUnit& )=nullptr;
         if(modeOnly_.oneGet()=="bomAdd")
             fileOne=&CmdUnicode::bomAdd;
         else if (modeOnly_.oneGet()=="bomRemove")
@@ -68,10 +68,10 @@ public:
             fileOne=&CmdUnicode::valid;
         assert(fileOne);
 
-        for(const auto& file: files_.setGet())
+        for(const auto& file: files.setGet())
             (this->*fileOne)(file);
 
-        files_.scan([this, fileOne](FileSet::FileUnit&& fu)
+        files.scan([this, fileOne](FileUnit&& fu)
             {
                 (this->*fileOne)(fu);
             }
@@ -81,7 +81,7 @@ public:
     }
 
 private:
-    void valid(const FileSet::FileUnit& file)
+    void valid(const FileUnit& file)
     {
         bf::ifstream strm;
         const auto result=bomUtf8Check(file, strm);
@@ -93,7 +93,7 @@ private:
             << (result.second ? ": valid" : ": invalid") << std::endl;
     }
 
-    void bomAdd(const FileSet::FileUnit& file)
+    void bomAdd(const FileUnit& file)
     {
         bf::ifstream strm;
         const auto result=bomUtf8Check(file, strm);
@@ -122,7 +122,7 @@ private:
         bf::rename(newFile, file.total);
     }
 
-    void bomRemove(const FileSet::FileUnit& file)
+    void bomRemove(const FileUnit& file)
     {
         bf::ifstream strm;
         const auto result=bomUtf8Check(file, strm);
@@ -151,7 +151,7 @@ private:
     }
 
 private:
-    std::pair<bool, bool> bomUtf8Check(const FileSet::FileUnit& file, bf::ifstream& strm)
+    std::pair<bool, bool> bomUtf8Check(const FileUnit& file, bf::ifstream& strm)
     {
         if(!file.isExist())
         {
@@ -185,7 +185,6 @@ private:
     }
 
 private:
-    FileSet files_;
     OptionOneAndOnly modeOnly_;
 };
 

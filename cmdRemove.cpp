@@ -24,9 +24,9 @@ namespace ezsh
 
 namespace bf=boost::filesystem;
 
-class CmdRemove:public CmdBaseT<CmdRemove>
+class CmdRemove:public CmdBaseT<CmdRemove, FileSetCmdBase<>>
 {
-    typedef CmdBaseT<CmdRemove> BaseThis;
+    typedef CmdBaseT<CmdRemove, FileSetCmdBase> BaseThis;
 public:
     CmdRemove()
         :BaseThis("remove - remove file or dir")
@@ -34,8 +34,6 @@ public:
         opt_.add_options()
             ("force,f", "ignore nonexistent files and arguments")
         ;
-
-        components_.push_back(FileSet::componentGet());
     }
 
     static const char* nameGet()
@@ -46,11 +44,12 @@ public:
     MainReturn doit() override
     {
         const auto& vm=mapGet();
+        auto& files=fileGet();
 
-        files_.init(vm);
+        files.init(vm);
 
         const bool force=vm.count("force") ? true : false;
-        for(const auto& file: files_.setGet())
+        for(const auto& file: files.setGet())
         {
             if(!file.isExist())
             {
@@ -69,7 +68,7 @@ public:
                 continue;
             }
 
-            if(files_.isRecursive())
+            if(files.isRecursive())
             {
                 bf::remove_all(file.total, ec);
                 if(ec && !force)
@@ -85,8 +84,6 @@ public:
         return MainReturn::eGood;
     }
 
-private:
-    FileSet files_;
 };
 
 namespace
