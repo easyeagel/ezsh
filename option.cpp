@@ -16,7 +16,11 @@
 //=====================================================================================
 //
 
+#include<cstdlib>
+#include<boost/algorithm/string/split.hpp>
+
 #include"option.hpp"
+#include"filesystem.hpp"
 
 namespace ezsh
 {
@@ -72,7 +76,7 @@ void CmdBase::help(std::ostream& strm)
         c->shortHelp(strm);
 }
 
-void CmdBase::parse(int ac, const char* const* av)
+void CmdBase::parse(int ac, char* av[])
 {
     bp::options_description optComponents;
     for(auto& c: components_)
@@ -107,6 +111,73 @@ CmdBase::~CmdBase()
 {}
 
 
+
+
+Environment::Environment()
+{
+#ifdef WIN32
+    const wchar_t* const* env=::_wenviron;
+    for(; *env!=nullptr; ++env)
+    {
+        const wchar_t* str=*env;
+        const wchar_t* strend=str+std::wcslen(str);
+        auto const equ=std::find(str, strend, L'=');
+        if(equ==strend)
+            continue;
+        maps_[WCharConverter::to(std::wstring(str, equ))]=WCharConverter::to(std::wstring(equ+1, strend));
+    }
+
+    const std::string paths=maps_["PATH"];
+    if(paths.empty())
+        return;
+
+    boost::algorithm::split(paths_, paths,
+        [](char c){ return c==';'; },
+        boost::algorithm::token_compress_mode_type::token_compress_on
+    );
+#else
+
+    const char* const* env=::environ;
+    for(; *env!=nullptr; ++env)
+    {
+        const char* str=*env;
+        const char* strend=str+std::strlen(str);
+        auto const equ=std::find(str, strend, '=');
+        if(equ==strend)
+            continue;
+        maps_[std::string(str, equ)]=std::string(equ+1, strend);
+    }
+
+    const std::string paths=maps_["PATH"];
+    if(paths.empty())
+        return;
+
+    boost::algorithm::split(paths_, paths,
+        [](char c){ return c==':'; },
+        boost::algorithm::token_compress_mode_type::token_compress_on
+    );
+#endif  //WIN32
+
+}
+
+std::string Environment::pathFile(const std::string& file) const
+{
+    for(const auto& p: paths_)
+    {
+        std::string t=p;
+        if(!t.empty() && t.back()!='/')
+            t.push_back('/');
+        t.append(file);
+
+        const Path path(t);
+        boost::system::error_code ec;
+        const auto st=bf::status(path, ec);
+        if(st.type()!=bf::file_type::file_not_found && (st.permissions() & bf::perms::owner_exe))
+			return std::move(WCharConverter::to(path.native()));
+    }
+
+    return std::string();
+}
 
 }  // namespace ezsh
 

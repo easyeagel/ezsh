@@ -108,25 +108,45 @@ public:
     bool load()
     {
         bf::ifstream strm(file_);
+        ScriptUnit unit;
+        std::string line;
         for(;;)
         {
-            ScriptUnit unit;
-            std::getline(strm, unit.line);
+            std::getline(strm, line);
             if(!strm)
-                return true;
+            {
+                if(unit.line.empty())
+                    break;
+                goto GotoUnitEnd;
+            }
 
-            boost::trim(unit.line);
-            if(unit.line.empty() || unit.line[0]=='#')
+            boost::trim(line);
+            if(line.empty() || line[0]=='#')
+            {
                 continue;
+            } else if(line[0]=='-') {
+                unit.line += " ";
+                unit.line += line;
+                continue;
+            } else if(unit.line.empty()) {
+                unit.line += line;
+                continue;
+            } else {
+            GotoUnitEnd:
+                if(tokenize(unit)==false)
+                    return false;
 
-            if(tokenize(unit)==false)
-                return false;
+                unit.trait=ezsh::CmdDict::find(unit.args[0]);
+                if(unit.trait==nullptr)
+                    return false;
 
-            unit.trait=ezsh::CmdDict::find(unit.args[0]);
-            if(unit.trait==nullptr)
-                return false;
+                script_.emplace_back(std::move(unit));
 
-            script_.emplace_back(std::move(unit));
+                if(line.empty()) //文件已经结束
+                    break;
+
+                unit.line += line;
+            }
         }
 
         return true;
@@ -165,7 +185,7 @@ public:
             const auto& cmd=u.trait->create();
             try
             {
-                cmd->parse(u.args.size(), u.args.data());
+                cmd->parse(u.args.size(), const_cast<char**>(u.args.data()));
             } catch (const boost::program_options::error& ec) {
                 std::cerr << ec.what() << std::endl;
                 return MainReturn::eParamInvalid;

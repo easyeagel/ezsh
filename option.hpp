@@ -94,7 +94,7 @@ public:
     typedef std::function<void (const VarMap&)> AfterParseCall;
 
     virtual void help(std::ostream& strm=std::cerr);
-    virtual void parse(int ac, const char* const* av);
+    virtual void parse(int ac, char* av[]);
     virtual MainReturn init(const ContextSPtr& context);
     virtual ~CmdBase();
 
@@ -295,6 +295,23 @@ OptionRegisterT()
     OptionDict::dictGet().emplace(Option::nameGet(), Option::componentGet());
 }
 
+};
+
+class Environment
+{
+    Environment();
+public:
+    static const Environment& instance()
+    {
+        static Environment gs;
+        return gs;
+    }
+
+    std::string pathFile(const std::string& file) const;
+
+private:
+    std::vector<std::string> paths_;
+    std::map<std::string, std::string> maps_;
 };
 
 

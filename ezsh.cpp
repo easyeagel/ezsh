@@ -27,7 +27,7 @@ namespace ezsh
 {
 
 //假设命令行参数都是utf8编码
-int myMain(int argc, const char* argv[])
+int myMain(int argc, char* argv[])
 {
     std::string cmdName(argc<=1 ? "help" : argv[1]);
     auto trait=CmdDict::find(cmdName);
@@ -68,13 +68,15 @@ int wmain(int argc, const wchar_t* argv[])
 {
     std::setlocale(LC_CTYPE, "");
 
+	ezsh::Environment::instance();
+
     std::vector<std::string> args;
     for(int i=0; i<argc; ++i)
 		args.emplace_back(ezsh::WCharConverter::to(argv[i], std::wcslen(argv[i])));
 
-    std::vector<const char*> argData;
+    std::vector<char*> argData;
     for(const auto& arg: args)
-        argData.push_back(arg.data());
+        argData.push_back(const_cast<char*>(arg.data()));
 
     return ezsh::myMain(argData.size(), argData.data());
 }
@@ -82,9 +84,11 @@ int wmain(int argc, const wchar_t* argv[])
 #else
 
 //非Windows系统假设默认为utf8
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     std::setlocale(LC_CTYPE, "");
+    ezsh::Environment::instance();
+
     return ezsh::myMain(argc, argv);
 }
 
