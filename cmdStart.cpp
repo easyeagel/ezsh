@@ -17,9 +17,11 @@
 //
 
 #ifndef WIN32
-#include<unistd.h>
+#include<fcntl.h>
+#include<sys/stat.h>
 #include<sys/types.h>
 #include<sys/wait.h>
+#include<unistd.h>
 #else
 #endif //WIN32
 
@@ -45,6 +47,8 @@ public:
             ("fileExistNot", bp::value<std::vector<std::string>>(), "start exec, if this file not exist")
             ("dirExist",     bp::value<std::vector<std::string>>(), "start exec, if this dir exist")
             ("dirExistNot",  bp::value<std::vector<std::string>>(), "start exec, if this dir not exist")
+
+            ("stdOut",  bp::value<std::string>(), "pipe stdout to this file")
         ;
     }
 
@@ -79,6 +83,11 @@ public:
     {
         if(check()==false)
             return MainReturn::eGood;
+
+        const auto& vm=mapGet();
+        auto itr=vm.find("stdOut");
+        if(itr!=vm.end())
+            stdOut_=itr->second.as<std::string>();
 
         const size_t count=cmdLines_.size();
         for(size_t i=1; i<count; ++i)
@@ -162,6 +171,28 @@ private:
     }
 
 #ifdef WIN32
+    void stdOut(::STARTUPINFOW& info)
+    {
+        if(stdOut_.empty())
+            return;
+
+        Path path(stdOut_);
+        path.make_preferred();
+		::SECURITY_ATTRIBUTES att;
+		std::memset(&att, 0, sizeof(att));
+		att.nLength = sizeof(att);
+		att.bInheritHandle = true;
+        auto handle=::CreateFileW(path.native().c_str(),
+            GENERIC_WRITE, FILE_SHARE_READ, &att,
+			OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr
+        );
+
+		auto const error = ::GetLastError();
+        assert(handle!=INVALID_HANDLE_VALUE);
+        info.hStdOutput=handle;
+		info.dwFlags |= STARTF_USESTDHANDLES;
+    }
+
     int start(const std::string& exe, CmdLine& cl)
     {
 		Path path(exe);
@@ -185,11 +216,13 @@ private:
 		si.cb = sizeof(si);
 		std::memset(&pi, 0, sizeof(pi) );
 
+        stdOut(si);
+
 		if (!::CreateProcessW(nullptr,
 			const_cast<wchar_t*>(cmd.data()),        // Command line
 			nullptr,           // Process handle not inheritable
 			nullptr,           // Thread handle not inheritable
-			false,          // Set handle inheritance to FALSE
+			true,          // Set handle inheritance to true
 			0,              // No creation flags
 			nullptr,           // Use parent's environment block
 			nullptr,           // Use parent's starting directory 
@@ -207,10 +240,23 @@ private:
 		// Close process and thread handles. 
 		::CloseHandle(pi.hProcess);
 		::CloseHandle(pi.hThread);
-
+		if (si.hStdOutput)
+			::CloseHandle(si.hStdOutput);
+		if (si.hStdError)
+			::CloseHandle(si.hStdError);
+		if(si.hStdInput)
+			::CloseHandle(si.hStdInput);
 		return 0;
     }
 #else
+    void stdOut()
+    {
+        if(stdOut_.empty())
+            return;
+        int const fd=::open(stdOut_.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR);
+        ::dup2(fd, STDOUT_FILENO);
+    }
+
     int start(const std::string& exe, CmdLine& cmd)
     {
         cmd.push_back(nullptr);
@@ -220,6 +266,7 @@ private:
         {
             case 0://child
             {
+                stdOut();
                 ::execv(exe.c_str(), cmd.data());
                 ::perror("execv");
                 ::exit(EXIT_FAILURE);
@@ -240,6 +287,7 @@ private:
 
 #endif //__MSC_VER
 private:
+    std::string stdOut_;
     std::vector<CmdLine> cmdLines_;
 };
 
