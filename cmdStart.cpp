@@ -37,7 +37,16 @@ class CmdStart: public CmdBaseT<CmdStart>
 public:
     CmdStart()
         :BaseThis("start - start a program")
-    {}
+    {
+        opt_.add_options()
+            ("exist",        bp::value<std::vector<std::string>>(), "start exec, if this exist")
+            ("existNot",     bp::value<std::vector<std::string>>(), "start exec, if this not exist")
+            ("fileExist",    bp::value<std::vector<std::string>>(), "start exec, if this file exist")
+            ("fileExistNot", bp::value<std::vector<std::string>>(), "start exec, if this file not exist")
+            ("dirExist",     bp::value<std::vector<std::string>>(), "start exec, if this dir exist")
+            ("dirExistNot",  bp::value<std::vector<std::string>>(), "start exec, if this dir not exist")
+        ;
+    }
 
     void parse(int ac, char* av[]) override
     {
@@ -68,6 +77,9 @@ public:
 
     MainReturn doit()
     {
+        if(check()==false)
+            return MainReturn::eGood;
+
         const size_t count=cmdLines_.size();
         for(size_t i=1; i<count; ++i)
         {
@@ -88,6 +100,48 @@ public:
     }
 
 private:
+    bool check()
+    {
+        const auto& vm=mapGet();
+
+        typedef std::function<bool (const bf::file_status& st)> Cond;
+        struct U
+        {
+            const char* name;
+            Cond cond;
+        };
+
+        typedef bf::file_type FT;
+        const U d[]=
+        {
+            {"exist",        [](const bf::file_status& st){ return st.type()!=FT::file_not_found; } },
+            {"existNot",     [](const bf::file_status& st){ return st.type()==FT::file_not_found; } },
+            {"fileExist",    [](const bf::file_status& st){ return st.type()==FT::regular_file; } },
+            {"fileExistNot", [](const bf::file_status& st){ return st.type()!=FT::regular_file; } },
+            {"dirExist",     [](const bf::file_status& st){ return st.type()==FT::directory_file; } },
+            {"dirExistNot",  [](const bf::file_status& st){ return st.type()!=FT::directory_file; } },
+        };
+
+        for(const auto& u: d)
+        {
+            auto itr=vm.find(u.name);
+            if(itr!=vm.end())
+            {
+                const auto& files=itr->second.as<std::vector<std::string>>();
+                for(const auto& file: files)
+                {
+                    Path path(file);
+                    boost::system::error_code ec;
+                    const auto st=bf::status(file, ec);
+                    if(u.cond(st)==false)
+                        return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     std::string exeFind(const std::string& file)
     {
 		std::string adjustFile = file;
