@@ -16,3 +16,31 @@
 //=====================================================================================
 //
 
+#include"option.hpp"
+#include"script.hpp"
+
+namespace ezsh
+{
+
+class CmdForeach:public CommandGroup<CmdForeach>
+{
+    typedef CommandGroup<CmdForeach> BaseThis;
+public:
+    CmdForeach(Script&& c)
+        :BaseThis(std::move(c))
+    {}
+
+    static const char* nameGet()
+    {
+        return "foreach";
+    }
+
+    MainReturn doit(const ContextSPtr& ) override
+    {
+        return MainReturn::eGood;
+    }
+
+};
+
+}
+
