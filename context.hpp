@@ -34,12 +34,21 @@
 namespace ezsh
 {
 
-class Variable:
-    public boost::variant<
-        std::string,
-        std::vector<std::string>
-    >
-{};
+typedef std::string VarString;
+typedef std::vector<std::string> VarList;
+
+class Variable: public boost::variant<VarString, VarList>
+{
+    typedef boost::variant<VarString, VarList> BaseThis;
+public:
+    template<typename... Args>
+    Variable(Args&&... args)
+        :BaseThis(std::forward<Args&&>(args)...)
+    {}
+
+};
+
+typedef std::shared_ptr<Variable> VarSPtr;
 
 class Context;
 class ContextStack;
@@ -142,9 +151,27 @@ public:
         return stdErr_;
     }
 
+    void set(const std::string& name, const VarSPtr& val)
+    {
+        vars_[name]=val;
+    }
+
+    bool replace(std::string& str) const
+    {
+        std::string tmp;
+        auto const ret=replace(str, tmp);
+        if(ret==false)
+            return false;
+        str=tmp;
+        return true;
+    }
+
+    //xxxx${varName, N}xxxx
+    bool replace(const std::string& str, std::string& dest) const;
+
 private:
     ContextSPtr front_;
-    std::map<std::string, Variable> variables_;
+    std::map<std::string, VarSPtr> vars_;
 
     StdOutStream stdOut_;
     StdErrStream stdErr_;

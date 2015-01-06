@@ -65,7 +65,7 @@ elseif(CLANG)
     set(ExeLinkFlags    "-Wl,-rpath,${ComplierRoot}/lib64 -static-libstdc++ -static-libgcc")
 else(MSVC)
     include_directories(SYSTEM ${BoostRoot})
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0501)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0501 -D_SCL_SECURE_NO_WARNINGS)
     link_directories("${BoostRoot}/lib32-msvc-12.0" ${CMAKE_BINARY_DIR})
 endif()
 include_directories(SYSTEM
@@ -98,8 +98,8 @@ add_subdirectory(libs/sqlite)
 #===============================================================================================
 set(ezshSrc
     ezsh.cpp option.cpp context.cpp fileset.cpp glob.cpp
-    cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp cmdScript.cpp
-    cmdUnicode.cpp cmdList.cpp cmdStart.cpp
+    cmdContext.cpp cmdScript.cpp cmdStart.cpp cmdUnicode.cpp cmdList.cpp
+    cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp
 )
 
 add_executable(ezsh ${ezshSrc})

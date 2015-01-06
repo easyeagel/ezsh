@@ -93,12 +93,15 @@ private:
 
 class Script
 {
+    typedef std::vector<char*> CmdLine;
+    typedef std::vector<std::string> StrCmdLine;
+
 public:
     struct ScriptUnit
     {
         std::string line;
         CmdTraitSPtr trait;
-        std::vector<const char*> args;
+        std::vector<std::string> args;
     };
 
     Script(const std::string& path)
@@ -163,8 +166,8 @@ public:
             const auto ret=sep(itr, end,
                 [&unit, &have](std::string::iterator s, std::string::iterator e)
                 {
-                    unit.args.push_back(&*s);
                     *e='\0';
+                    unit.args.push_back(&*s);
                     have=true;
                 }
             );
@@ -177,21 +180,31 @@ public:
         }
     }
 
-    MainReturn execute()
+    MainReturn execute(const ContextSPtr& context)
     {
+        std::vector<char*> args;
+        std::vector<std::string> strArgs;
         for(auto& u: script_)
         {
-            auto& cs=ezsh::ContextStack::instance();
+            args.clear();
+            cmdlineReplace(context, u.args, strArgs);
+            std::for_each(strArgs.begin(), strArgs.end(),
+                [&args](const std::string& s)
+                {
+                    args.push_back(const_cast<char*>(s.data()));
+                }
+            );
+
             const auto& cmd=u.trait->create();
             try
             {
-                cmd->parse(u.args.size(), const_cast<char**>(u.args.data()));
+                cmd->parse(args.size(), const_cast<char**>(args.data()));
             } catch (const boost::program_options::error& ec) {
                 std::cerr << ec.what() << std::endl;
                 return MainReturn::eParamInvalid;
             }
 
-            auto ret=cmd->init(cs.top());
+            auto ret=cmd->init(context);
             if(ret==ezsh::MainReturn::eGood)
                 ret=cmd->doit();
 
@@ -200,6 +213,22 @@ public:
         }
 
         return MainReturn::eGood;
+    }
+
+private:
+    void cmdlineReplace(const ContextSPtr& context, const StrCmdLine& cmd, StrCmdLine& dest)
+    {
+        const auto sz=cmd.size();
+        if(dest.size()!=sz)
+            dest.resize(sz);
+
+        for(size_t i=0; i<sz; ++i)
+        {
+            const auto& s=cmd[i];
+            auto& d=dest[i];
+            d.clear();
+            context->replace(s, d);
+        }
     }
 
 private:
@@ -261,7 +290,7 @@ public:
 
         for(auto& s: scripts_)
         {
-            const auto ret=s.execute();
+            const auto ret=s.execute(contextGet());
             if(ret!=MainReturn::eGood)
                 return ret;
         }

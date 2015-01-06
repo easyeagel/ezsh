@@ -17,6 +17,49 @@
 //
 
 #include"context.hpp"
+#include<boost/xpressive/xpressive.hpp>
+
+namespace ezsh
+{
+
+namespace xpr
+{
+using namespace boost::xpressive;
+
+static sregex gsName= (as_xpr('_') | alpha) >> *(alnum|'_');
+static sregex gsVar = as_xpr("${") >> *blank >> (s1=gsName) >> *blank >> '}';
+
+}
+
+bool Context::replace(const std::string& str, std::string& dest) const
+{
+    bool ret=true;
+    namespace bx=boost::xpressive;
+    bx::regex_replace(std::back_inserter(dest), str.begin(), str.end(), xpr::gsVar,
+        [this, &ret](const bx::smatch& match) -> std::string
+        {
+            const auto& name=match[bx::s1].str();
+            auto const itr=vars_.find(name);
+            if(itr==vars_.end())
+            {
+                ret=false;
+                return std::string();
+            }
+
+            const auto var=itr->second.get();
+            auto const strVal=boost::get<VarString>(var);
+            if(strVal!=nullptr)
+                return *strVal;
+
+            auto const listVal=boost::get<VarList>(var);
+            return listVal->front();
+        }
+    );
+
+    return false;
+}
+
+}
 
 
 
