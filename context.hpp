@@ -156,6 +156,8 @@ public:
         vars_[name]=val;
     }
 
+    VarSPtr get(const std::string& name) const;
+
     bool replace(std::string& str) const
     {
         std::string tmp;

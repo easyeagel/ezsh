@@ -85,7 +85,7 @@ public:
         for(auto& s: scripts_)
         {
             const auto ret=s.execute(contextGet());
-            if(ret!=MainReturn::eGood)
+            if(ret.bad())
                 return ret;
         }
 

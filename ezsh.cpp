@@ -52,11 +52,11 @@ int myMain(int argc, char* argv[])
     }
 
     auto ret=cmd->init(cs.top());
-    if(ret==MainReturn::eGood)
+    if(ret.good())
         ret=cmd->doit();
 
     TaskPool::stop();
-    return static_cast<int>(ret);
+    return ret.get<int>();
 }
 
 }

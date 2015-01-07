@@ -161,6 +161,7 @@ public:
 	}
 
     MainReturn execute(const ContextSPtr& context);
+    MainReturn execute(const ContextSPtr& context, CmdBase& cmd);
 private:
     void cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest);
 
@@ -200,32 +201,46 @@ private:
     Container script_;
 };
 
-class GroupBeginBase: public CmdBase
+class GroupPointBase: public CmdBase
 {
 public:
-    GroupBeginBase(const char* msg)
-        :CmdBase(msg)
+    GroupPointBase(ScriptCommand&& sc, const char* msg)
+        :CmdBase(msg), sc_(std::move(sc))
     {}
 
-};
+    MainReturn execute(const ContextSPtr& ctx)
+    {
+        return sc_.execute(ctx, *this);
+    }
 
-class GroupEndBase: public CmdBase
-{
-public:
-    GroupEndBase(const char* msg)
-        :CmdBase(msg)
-    {}
+    MainReturn doit() override
+    {
+        return MainReturn::eGood;
+    }
 
+    void oldContextSet(const ContextSPtr& old)
+    {
+        oldCtx_=old;
+    }
+
+    const ContextSPtr& oldContextGet() const
+    {
+        return oldCtx_;
+    }
+
+private:
+    ContextSPtr oldCtx_;
+    ScriptCommand sc_;
 };
 
 class CommandGroupBase
 {
 public:
-    CommandGroupBase(ScriptCommand&& b, Script&& s, ScriptCommand&& e)
-        :begin_(std::move(b)), script_(std::move(s)), end_(std::move(e))
+    CommandGroupBase(Script&& s)
+        :script_(std::move(s))
     {}
 
-    virtual MainReturn execute(const ContextSPtr& context);
+    virtual MainReturn execute(const ContextSPtr& context) = 0;
 
     virtual ~CommandGroupBase()
     {}
@@ -241,18 +256,51 @@ public:
     }
 
 private:
-    ScriptCommand begin_;
     Script script_;
-    ScriptCommand end_;
 };
 
 template<typename Obj, typename Base=CommandGroupBase>
 class CommandGroup: public Base
 {
+    Obj& objGet()
+    {
+        return static_cast<Obj&>(*this);
+    }
+
+    const Obj& objGet() const
+    {
+        return static_cast<Obj&>(*this);
+    }
 public:
-    CommandGroup(ScriptCommand&& b, Script&& s, ScriptCommand&& e)
-        :Base(std::move(b), std::move(s), std::move(e))
+    CommandGroup(Script&& s)
+        :Base(std::move(s))
     {}
+
+    MainReturn execute(const ContextSPtr& context)
+    {
+        auto& b=objGet().groupBeginGet();
+        b.oldContextSet(context);
+        auto& e=objGet().groupEndGet();
+        e.oldContextSet(context);
+
+        auto ctx=context->alloc();
+
+        for(;;)
+        {
+            auto ret=b.execute(ctx);
+            if(ret.bad())
+                return ret;
+
+            if(ret.get()==MainReturn::eGroupDone)
+                break;
+
+            ret=this->scriptGet().execute(ctx);
+            if(ret.bad())
+                return ret;
+        }
+
+        return e.execute(ctx);
+    }
 
     static std::unique_ptr<CommandGroupBase> create(ScriptCommand&& b, Script&& s, ScriptCommand&& e)
     {

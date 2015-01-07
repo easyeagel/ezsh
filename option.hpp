@@ -61,11 +61,42 @@ private:
     static bool stared_;
 };
 
-enum class MainReturn
+struct MainReturn
 {
-    eGood=0,
-    eParamInvalid=1,
-    eNotAllowed=2,
+    enum Value
+    {
+        eGood=0,
+        eGroupDone,
+
+
+        eBadStart=64,
+        eNotAllowed,
+        eParamInvalid,
+    };
+
+    bool good() const
+    {
+        return val_<=eBadStart;
+    }
+
+    bool bad() const
+    {
+        return !good();
+    }
+
+    MainReturn()=default;
+    MainReturn(Value val)
+        :val_(val)
+    {}
+
+    template<typename Int=Value>
+    Int get() const
+    {
+        return static_cast<Int>(val_);
+    }
+
+private:
+    Value val_=eGood;
 };
 
 namespace bp=boost::program_options;

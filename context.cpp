@@ -31,6 +31,24 @@ static sregex gsVar = as_xpr("${") >> *blank >> (s1=gsName) >> *blank >> '}';
 
 }
 
+VarSPtr Context::get(const std::string& name) const
+{
+    auto ctx=shared_from_this();
+    while(ctx)
+    {
+        auto const itr=ctx->vars_.find(name);
+        if(itr==vars_.end())
+        {
+            ctx=ctx->frontGet();
+            continue;
+        }
+
+        return itr->second;
+    }
+
+    return nullptr;
+}
+
 bool Context::replace(const std::string& str, std::string& dest) const
 {
     bool ret=true;

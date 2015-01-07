@@ -22,11 +22,6 @@
 namespace ezsh
 {
 
-MainReturn CommandGroupBase::execute(const ContextSPtr& context)
-{
-    return this->scriptGet().execute(context->alloc());
-}
-
 void ScriptCommand::cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest)
 {
     const auto sz=cmd.size();
@@ -44,6 +39,12 @@ void ScriptCommand::cmdlineReplace(const ContextSPtr& context, const StrCommandL
 
 MainReturn ScriptCommand::execute(const ContextSPtr& context)
 {
+    const auto& cmd=traitGet()->create();
+    return execute(context, *cmd);
+}
+
+MainReturn ScriptCommand::execute(const ContextSPtr& context, CmdBase& cmd)
+{
     CommandLine args;
     StrCommandLine strArgs;
     cmdlineReplace(context, cmdlineGet(), strArgs);
@@ -54,18 +55,17 @@ MainReturn ScriptCommand::execute(const ContextSPtr& context)
         }
     );
 
-    const auto& cmd=traitGet()->create();
     try
     {
-        cmd->parse(args.size(), const_cast<char**>(args.data()));
+        cmd.parse(args.size(), const_cast<char**>(args.data()));
     } catch (const boost::program_options::error& ec) {
         std::cerr << ec.what() << std::endl;
         return MainReturn::eParamInvalid;
     }
 
-    auto ret=cmd->init(context);
-    if(ret==ezsh::MainReturn::eGood)
-        ret=cmd->doit();
+    auto ret=cmd.init(context);
+    if(ret.good())
+        ret=cmd.doit();
     return ret;
 }
 
@@ -193,7 +193,7 @@ MainReturn Script::execute(const ContextSPtr& context)
         if(sc!=nullptr)
         {
             const auto ret=sc->execute(context);
-            if(ret!=MainReturn::eGood)
+            if(ret.bad())
                 return ret;
             continue;
         }
@@ -202,7 +202,7 @@ MainReturn Script::execute(const ContextSPtr& context)
         if(cg!=nullptr)
         {
             const auto ret=(*cg)->execute(context);
-            if(ret!=MainReturn::eGood)
+            if(ret.bad())
                 return ret;
             continue;
         }
