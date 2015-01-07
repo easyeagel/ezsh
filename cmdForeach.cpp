@@ -24,6 +24,29 @@ namespace ezsh
 
 class GroupBeginForeach: public GroupPointBase
 {
+    class Visitor: public boost::static_visitor<>
+    {
+    public:
+        Visitor(GroupBeginForeach& sc)
+            :sc_(sc)
+        {}
+
+        void operator()(const VarString& var) const
+        {
+            sc_.list_.emplace_back(var);
+            sc_.listPtr_.push_back(&sc_.list_);
+        }
+
+        void operator()(const VarList& var) const
+        {
+            sc_.listPtr_.push_back(&var);
+        }
+
+    private:
+        GroupBeginForeach& sc_;
+    };
+
+    friend class Visitor;
 public:
     GroupBeginForeach(ScriptCommand&& sc)
         :GroupPointBase(std::move(sc), "foreach - foreach group begin")
@@ -31,6 +54,7 @@ public:
         opt_.add_options()
             ("loop", bp::value<std::string>()->required(), "loop var name")
             ("var",  bp::value<std::string>(), "foreach from context var")
+            ("list", bp::value<std::vector<std::string>>()->multitoken(), "foreah from this list")
         ;
     }
 
@@ -44,33 +68,35 @@ public:
             first_=false;
             const auto& vm=mapGet();
 
+            loop_=vm["loop"].as<std::string>();
+
             auto itr=vm.find("var");
             if(itr!=vm.end())
-                varPtr_=contextGet()->get(itr->second.as<std::string>());
+            {
+                auto const ptr=contextGet()->get(itr->second.as<std::string>());
+                if(ptr)
+                    boost::apply_visitor(Visitor(*this), *ptr);
+            }
 
-            itr=vm.find("loop");
-            assert(itr!=vm.end());
-            loop_=itr->second.as<std::string>();
+            itr=vm.find("list");
+            if(itr!=vm.end())
+                listPtr_.push_back(&itr->second.as<VarList>());
 
-            varstr_=boost::get<VarString>(varPtr_.get());
-            varlist_=boost::get<VarList>(varPtr_.get());
+            if(listPtr_.empty())
+                return MainReturn::eGroupDone;
         }
 
-        if(varstr_!=nullptr && !varstr_->empty())
+        auto& ptr=listPtr_.front();
+        contextGet()->set(loop_, VarSPtr(new Variable(ptr->at(index_++))));
+        if(ptr->size()<=index_)
         {
-            done_=true;
-            contextGet()->set(loop_, VarSPtr(new Variable(*varstr_)));
-            return MainReturn::eGood;
+            index_=0;
+            listPtr_.pop_front();
+            if(listPtr_.empty())
+                done_=true;
         }
 
-        if(varlist_!=nullptr && !varlist_->empty())
-        {
-            contextGet()->set(loop_, VarSPtr(new Variable(varlist_->at(index_++))));
-            done_=(varlist_->size()<=index_);
-            return MainReturn::eGood;
-        }
-
-        return MainReturn::eGroupDone;
+        return MainReturn::eGood;
     }
 
 private:
@@ -79,10 +105,8 @@ private:
     std::string loop_;
 
     size_t index_=0;
-    VarSPtr varPtr_;
-
-    VarList* varlist_=nullptr;
-    VarString* varstr_=nullptr;
+    VarList list_;
+    std::deque<const VarList*> listPtr_;
 };
 
 class CmdForeach:public CommandGroup<CmdForeach>
