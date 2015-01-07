@@ -97,9 +97,9 @@ add_subdirectory(libs/sqlite)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #===============================================================================================
 set(ezshSrc
+    cmdTextpp.cpp cmdContext.cpp cmdScript.cpp cmdStart.cpp cmdUnicode.cpp
+    cmdList.cpp cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp
     ezsh.cpp option.cpp context.cpp fileset.cpp glob.cpp script.cpp
-    cmdContext.cpp cmdScript.cpp cmdStart.cpp cmdUnicode.cpp cmdList.cpp
-    cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp
 )
 
 add_executable(ezsh ${ezshSrc})
