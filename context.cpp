@@ -39,24 +39,33 @@ bool Context::replace(const std::string& str, std::string& dest) const
         [this, &ret](const bx::smatch& match) -> std::string
         {
             const auto& name=match[bx::s1].str();
-            auto const itr=vars_.find(name);
-            if(itr==vars_.end())
+
+            //逐层向上查找
+            auto ctx=shared_from_this();
+            while(ctx)
             {
-                ret=false;
-                return std::string();
+                auto const itr=ctx->vars_.find(name);
+                if(itr==vars_.end())
+                {
+                    ctx=ctx->frontGet();
+                    continue;
+                }
+
+                const auto var=itr->second.get();
+                auto const strVal=boost::get<VarString>(var);
+                if(strVal!=nullptr)
+                    return *strVal;
+
+                auto const listVal=boost::get<VarList>(var);
+                return listVal->front();
             }
 
-            const auto var=itr->second.get();
-            auto const strVal=boost::get<VarString>(var);
-            if(strVal!=nullptr)
-                return *strVal;
-
-            auto const listVal=boost::get<VarList>(var);
-            return listVal->front();
+            ret=false;
+            return std::string();
         }
     );
 
-    return false;
+    return ret;
 }
 
 }

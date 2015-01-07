@@ -26,21 +26,26 @@ class CmdForeach:public CommandGroup<CmdForeach>
 {
     typedef CommandGroup<CmdForeach> BaseThis;
 public:
-    CmdForeach(Script&& c)
-        :BaseThis(std::move(c))
+    CmdForeach(ScriptCommand&& b, Script&& s, ScriptCommand&& e)
+        :BaseThis(std::move(b), std::move(s), std::move(e))
     {}
 
-    static const char* nameGet()
+    static const char* beginGet()
     {
         return "foreach";
     }
 
-    MainReturn doit(const ContextSPtr& ) override
+    static const char* endGet()
     {
-        return MainReturn::eGood;
+        return "endforeach";
     }
 
 };
+
+namespace
+{
+    CommandGroupRegister<CmdForeach> gsCommandGroupRegister;
+}
 
 }
 

@@ -126,7 +126,7 @@ public:
     {}
 };
 
-class Context
+class Context: public std::enable_shared_from_this<Context>
 {
     friend class ContextStack;
 
@@ -169,6 +169,12 @@ public:
     //xxxx${varName, N}xxxx
     bool replace(const std::string& str, std::string& dest) const;
 
+    template<typename C=Context>
+    ContextSPtr alloc()
+    {
+        return ContextSPtr(new C(shared_from_this()));
+    }
+
 private:
     ContextSPtr front_;
     std::map<std::string, VarSPtr> vars_;
@@ -188,20 +194,6 @@ public:
     {
         assert(!stack_.empty());
         return stack_.back();
-    }
-
-    template<typename C=Context>
-    const ContextSPtr& alloc()
-    {
-        const ContextSPtr ptr(new C(top()));
-        stack_.emplace_back(ptr);
-        return top();
-    }
-
-    template<typename C=Context>
-    const ContextSPtr& create()
-    {
-        return ContextSPtr (new C(top()));
     }
 
     void pop()

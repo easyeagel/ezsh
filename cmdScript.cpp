@@ -17,12 +17,11 @@
 //
 
 #include<cctype>
-#include<boost/filesystem.hpp>
-#include<boost/algorithm/string.hpp>
 #include<boost/filesystem/fstream.hpp>
 
 #include"script.hpp"
 #include"option.hpp"
+#include"filesystem.hpp"
 
 namespace ezsh
 {
@@ -71,7 +70,11 @@ public:
         {
             scripts_.emplace_back();
             auto& s=scripts_.back();
-            const auto ok=Script::load(file, s);
+            bf::ifstream strm(Path(file).path());
+            if(!strm)
+                continue;
+
+            const auto ok=Script::load(strm, s);
             if(ok==false)
             {
                 stdErr() << file << ": load failed" << std::endl;

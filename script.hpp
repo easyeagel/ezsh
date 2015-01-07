@@ -1,4 +1,4 @@
-//  Copyright [2015] <lgb (LiuGuangBao)>
+﻿//  Copyright [2015] <lgb (LiuGuangBao)>
 //=====================================================================================
 //
 //      Filename:  script.hpp
@@ -17,6 +17,8 @@
 //
 
 #pragma once
+
+#include<cctype>
 
 #include<set>
 #include<string>
@@ -91,57 +93,6 @@ private:
     bool escaped_=false;
 };
 
-class CommandGroupDict
-{
-    struct Unit
-    {
-        std::string begin;
-        std::string end;
-
-        bool operator<(const Unit& o) const
-        {
-            return begin<o.begin;
-        }
-    };
-
-    typedef std::set<Unit> Dict;
-
-    CommandGroupDict()=default;
-public:
-
-    const CommandGroupDict& instance()
-    {
-        static CommandGroupDict gs;
-        return gs;
-    }
-
-    const Unit* find(const std::string& begin) const
-    {
-        const auto itr=sets_.find(Unit{begin, std::string()});
-        if(itr==sets_.end())
-            return nullptr;
-        return &*itr;
-    }
-
-    void insert(const std::string& b, const std::string& e)
-    {
-        sets_.insert(Unit{b, e});
-    }
-
-private:
-    Dict sets_;
-};
-
-template<typename G>
-struct CommandGroupRegister
-{
-    CommandGroupRegister()
-    {
-        auto& d=const_cast<CommandGroupDict&>(CommandGroupDict::instance());
-        d.insert(G::beginGet(), G::endGet());
-    }
-};
-
 typedef std::vector<char*> CommandLine;
 typedef std::vector<std::string> StrCommandLine;
 
@@ -155,13 +106,10 @@ public:
         const auto end=line_.end();
         for(;;)
         {
-            bool have=false;
             const auto ret=sep(itr, end,
-                [this, &have](std::string::iterator s, std::string::iterator e)
+                [this](std::string::iterator s, std::string::iterator e)
                 {
-                    *e='\0';
-                    args_.push_back(&*s);
-                    have=true;
+                    args_.emplace_back(s, e);
                 }
             );
 
@@ -175,7 +123,8 @@ public:
 
     void lineAppend(const std::string& s)
     {
-        line_ += ' ';
+        if(!line_.empty())
+            line_ += ' ';
         line_ += s;
     }
 
@@ -184,21 +133,14 @@ public:
         return args_;
     }
 
+    const std::string& cmdGet() const
+    {
+        return args_[0];
+    }
+
     bool empty() const
     {
         return line_.empty();
-    }
-
-    bool init()
-    {
-        if(tokenize()==false)
-            return false;
-
-        trait_=CmdDict::find(args_[0]);
-        if(trait_==nullptr)
-            return false;
-
-        return true;
     }
 
     const CmdTraitSPtr& traitGet() const
@@ -206,26 +148,34 @@ public:
         return trait_;
     }
 
+    void traitSet(const CmdTraitSPtr& t)
+    {
+        trait_=t;
+    }
+
+	void reset()
+	{
+		line_.clear();
+		trait_.reset();
+		args_.clear();
+	}
+
+    MainReturn execute(const ContextSPtr& context);
+private:
+    void cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest);
+
 private:
     std::string line_;
     CmdTraitSPtr trait_;
     StrCommandLine args_;
 };
 
-class CommandGroupBase
-{
-public:
-    virtual MainReturn doit(const ContextSPtr& context) = 0;
-
-    virtual ~CommandGroupBase()
-    {}
-};
+class CommandGroupBase;
+typedef std::shared_ptr<CommandGroupBase> CommandGroupBaseSPtr;
 
 class Script
 {
-    typedef std::unique_ptr<ScriptCommand> ScriptCommandUPtr;
-    typedef std::unique_ptr<CommandGroupBase> CommandGroupBaseUPtr;
-    typedef boost::variant<ScriptCommandUPtr, CommandGroupBaseUPtr> Unit;
+    typedef boost::variant<ScriptCommand, CommandGroupBaseSPtr> Unit;
 public:
     typedef std::vector<Unit> Container;
 
@@ -234,32 +184,137 @@ public:
         :script_(std::move(s))
     {}
 
-    static bool load(const std::string& file, Script& spt);
+    typedef std::function<bool (std::istream&, ScriptCommand& )> BreakCond;
+
+    static bool load(std::istream& strm, Script& spt);
+
+    void push(Unit&& u)
+    {
+        script_.emplace_back(std::move(u));
+    }
+
     MainReturn execute(const ContextSPtr& context);
 
-private:
-    void cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest);
 
 private:
     Container script_;
+};
+
+class GroupBeginBase: public CmdBase
+{
+public:
+    GroupBeginBase(const char* msg)
+        :CmdBase(msg)
+    {}
+
+};
+
+class GroupEndBase: public CmdBase
+{
+public:
+    GroupEndBase(const char* msg)
+        :CmdBase(msg)
+    {}
+
+};
+
+class CommandGroupBase
+{
+public:
+    CommandGroupBase(ScriptCommand&& b, Script&& s, ScriptCommand&& e)
+        :begin_(std::move(b)), script_(std::move(s)), end_(std::move(e))
+    {}
+
+    virtual MainReturn execute(const ContextSPtr& context);
+
+    virtual ~CommandGroupBase()
+    {}
+
+    Script& scriptGet()
+    {
+        return script_;
+    }
+
+    const Script& scriptGet() const
+    {
+        return script_;
+    }
+
+private:
+    ScriptCommand begin_;
+    Script script_;
+    ScriptCommand end_;
 };
 
 template<typename Obj, typename Base=CommandGroupBase>
 class CommandGroup: public Base
 {
 public:
-    CommandGroup(Script&& s)
-        :script_(std::move(s))
+    CommandGroup(ScriptCommand&& b, Script&& s, ScriptCommand&& e)
+        :Base(std::move(b), std::move(s), std::move(e))
     {}
 
-    MainReturn doit(const ContextSPtr& )
+    static std::unique_ptr<CommandGroupBase> create(ScriptCommand&& b, Script&& s, ScriptCommand&& e)
     {
-        return MainReturn::eGood;
+        return std::unique_ptr<CommandGroupBase>(new Obj(std::move(b), std::move(s), std::move(e)));
+    }
+
+};
+
+class CommandGroupDict
+{
+    typedef std::function<std::unique_ptr<CommandGroupBase>(ScriptCommand&&, Script&&, ScriptCommand&& )> GroupCreate;
+    struct Unit
+    {
+        std::string begin;
+        std::string end;
+        GroupCreate create;
+
+        bool operator<(const Unit& o) const
+        {
+            return begin<o.begin;
+        }
+    };
+
+    typedef std::set<Unit> Dict;
+
+    CommandGroupDict()=default;
+public:
+
+    static const CommandGroupDict& instance()
+    {
+        static CommandGroupDict gs;
+        return gs;
+    }
+
+    const Unit* find(const std::string& begin) const
+    {
+        const auto itr=sets_.find(Unit{begin, std::string(), GroupCreate()});
+        if(itr==sets_.end())
+            return nullptr;
+        return &*itr;
+    }
+
+    void insert(const std::string& b, const std::string& e, GroupCreate&& c)
+    {
+        sets_.insert(Unit{b, e, c});
     }
 
 private:
-    Script script_;
+    Dict sets_;
 };
+
+template<typename G>
+struct CommandGroupRegister
+{
+    CommandGroupRegister()
+    {
+        auto& d=const_cast<CommandGroupDict&>(CommandGroupDict::instance());
+        d.insert(G::beginGet(), G::endGet(), &G::create);
+    }
+};
+
+
 
 
 
