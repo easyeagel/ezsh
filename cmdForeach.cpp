@@ -48,8 +48,8 @@ class GroupBeginForeach: public GroupPointBase
 
     friend class Visitor;
 public:
-    GroupBeginForeach(ScriptCommand&& sc)
-        :GroupPointBase(std::move(sc), "foreach - foreach group begin")
+    GroupBeginForeach(const ScriptCommand& sc)
+        :GroupPointBase(sc, "foreach - foreach group begin")
     {
         opt_.add_options()
             ("loop", bp::value<std::string>()->required(), "loop var name")
@@ -113,10 +113,10 @@ class CmdForeach:public CommandGroup<CmdForeach>
 {
     typedef CommandGroup<CmdForeach> BaseThis;
 public:
-    CmdForeach(ScriptCommand&& b, Script&& s, ScriptCommand&& e)
-        : BaseThis(std::move(s))
-        , begin_(std::move(b))
-        , end_(std::move(e), "endforeach - foreach group end")
+    CmdForeach(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
+        : BaseThis(s)
+        , begin_(b)
+        , end_(e, "endforeach - foreach group end")
     {}
 
     static const char* beginGet()

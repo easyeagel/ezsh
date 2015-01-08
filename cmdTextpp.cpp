@@ -1,4 +1,4 @@
-//  Copyright [2015] <lgb (LiuGuangBao)>
+﻿//  Copyright [2015] <lgb (LiuGuangBao)>
 //=====================================================================================
 //
 //      Filename:  cmdTextpp.cpp
@@ -28,8 +28,9 @@ namespace xpr
 {
     using namespace boost::xpressive;
     
-    static sregex gsNotComma   =~as_xpr(',');
-    static sregex gsNotCommaStr=+~as_xpr(',');
+    static sregex gsMacroName  = (alpha|'_') >> *(alnum|'_');
+    static sregex gsNotComma   =~(set=',','}');
+    static sregex gsNotCommaStr=+gsNotComma;
     static sregex gsTextpp=as_xpr("${")
         >> *blank >> gsNotCommaStr
         >> *(*blank >> ',' >> *blank >> gsNotCommaStr)
@@ -39,6 +40,7 @@ namespace xpr
 class CmdTextpp:public CmdBaseT<CmdTextpp, FileSetCmdBase<>>
 {
     typedef CmdBaseT<CmdTextpp, FileSetCmdBase> BaseThis;
+    typedef std::ostreambuf_iterator<char> OutItr;
 public:
     CmdTextpp()
         :BaseThis("textpp - textpp file or dir")
@@ -46,6 +48,7 @@ public:
         opt_.add_options()
             ("force,f",  "ignore nonexistent files and arguments")
             ("define,D", bp::value<std::vector<std::string>>(), "define a macro")
+            ("output",   bp::value<std::string>(), "output file name")
         ;
     }
 
@@ -60,6 +63,10 @@ public:
 
         optionDoit();
         const bool force=vm.count("force") ? true : false;
+        std::string out;
+        auto itr=vm.find("output");
+        if(itr!=vm.end())
+            out=itr->second.as<std::string>();
 
         auto& files=fileGet();
         files.init(vm);
@@ -74,7 +81,19 @@ public:
                 continue;
             }
 
-            fileOne(file);
+            bf::ifstream strm(file.total.path());
+            if(!strm)
+                continue;
+
+            if(out.empty())
+            {
+                fileOne(strm, OutItr(std::cout));
+            } else {
+                bf::ofstream ostrm(Path(out).path());
+                if(!ostrm)
+                    continue;
+                fileOne(strm, OutItr(ostrm));
+            }
         }
 
         return MainReturn::eGood;
@@ -99,32 +118,35 @@ private:
                     key=m.substr(0, eq);
                     val=m.substr(eq+1);
                 }
+
                 boost::trim(key);
                 boost::trim(val);
+
+                if(!xpr::regex_match(key.begin(), key.end(), xpr::gsMacroName))
+                {
+                    stdErr() << "warning:notInvalidMacroName: " << key << std::endl;
+                    continue;
+                }
+
                 dict_[key]=val;
             }
         }
     }
 
-    void fileOne(const FileUnit& file) const
+    OutItr fileOne(std::istream& strm, OutItr out) const
     {
-        bf::ifstream strm(file.total);
-        if(!strm)
-            return;
-
         std::string in;
         std::istreambuf_iterator<char> itr(strm);
         std::istreambuf_iterator<char> const end;
         std::copy(itr, end, std::back_inserter(in));
 
-        std::string out;
-        xpr::regex_replace(std::back_inserter(out), in.begin(), in.end(), xpr::gsTextpp,
-            [this](const xpr::smatch& what) -> std::string
+        xpr::regex_replace(out, in.begin(), in.end(), xpr::gsTextpp,
+            [this](const xpr::smatch& what, std::ostreambuf_iterator<char>& out) -> OutItr
             {
                 auto begin = what.nested_results().begin();
                 auto end   = what.nested_results().end();
 
-                xpr::sregex_id_filter_predicate name( xpr::gsNotCommaStr.regex_id() );
+                xpr::sregex_id_filter_predicate name(xpr::gsNotCommaStr.regex_id());
 
                 std::vector<std::string> result;
                 std::for_each(
@@ -136,37 +158,49 @@ private:
                     }
                 );
 
-                return matchOne(what, result);
+                return matchOne(what, result, out);
             }
         );
 
-        stdOut() << out;
+        return out;
     }
 
-    std::string matchOne(const xpr::smatch& what, const std::vector<std::string>& match) const
+    OutItr matchOne(const xpr::smatch& what, const std::vector<std::string>& match, OutItr out) const
     {
         if(match.size()==1) //简单宏替换
         {
             auto const itr=dict_.find(match.front());
-            if(itr==dict_.end())
-                return what.str();
-            return itr->second;
+            if(itr!=dict_.end())
+            {
+                auto const& s=itr->second;
+                std::copy(s.begin(), s.end(), out);
+                return out;
+            }
+        } else if(match[1]=="include") {
+            Path path=simpleReplace(match[0]);
+            bf::ifstream strm(path.path());
+            if(strm)
+                return fileOne(strm, out);
         }
 
-        const auto& opt=match[1];
-        if(opt=="include")
-        {
-            bf::ifstream strm(match[0]);
-            if(!strm)
-                return what.str();
-            std::string in;
-            std::istreambuf_iterator<char> itr(strm);
-            std::istreambuf_iterator<char> const end;
-            std::copy(itr, end, std::back_inserter(in));
-            return std::move(in);
-        }
+        const auto& s=what.str();
+        std::copy(s.begin(), s.end(), out);
+        return out;
+    }
 
-        return what.str();
+    std::string simpleReplace(const std::string& str) const
+    {
+        std::string out;
+        xpr::regex_replace(std::back_inserter(out), str.begin(), str.end(), xpr::gsMacroName,
+            [this](const xpr::smatch& what) -> std::string
+            {
+                auto const itr=dict_.find(what.str());
+                if(itr==dict_.end())
+                    return what.str();
+                return itr->second;
+            }
+        );
+        return std::move(out);
     }
 
 private:

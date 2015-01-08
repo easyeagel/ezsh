@@ -93,8 +93,21 @@ private:
     bool escaped_=false;
 };
 
+class Script;
+class ScriptCommand;
+class CommandGroupBase;
 typedef std::vector<char*> CommandLine;
 typedef std::vector<std::string> StrCommandLine;
+typedef std::function<std::unique_ptr<CommandGroupBase>(const ScriptCommand&, const Script&, const ScriptCommand& )> CommandGroupCreate;
+
+struct CommandGroupTrait
+{
+    std::string head;
+    std::string tail;
+    CommandGroupCreate create;
+};
+typedef std::shared_ptr<CommandGroupTrait> CommandGroupTraitSPtr;
+
 
 class ScriptCommand
 {
@@ -160,10 +173,10 @@ public:
 		args_.clear();
 	}
 
-    MainReturn execute(const ContextSPtr& context);
-    MainReturn execute(const ContextSPtr& context, CmdBase& cmd);
+    MainReturn execute(const ContextSPtr& context) const;
+    MainReturn execute(const ContextSPtr& context, CmdBase& cmd) const;
 private:
-    void cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest);
+    void cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest) const;
 
 private:
     std::string line_;
@@ -171,12 +184,35 @@ private:
     StrCommandLine args_;
 };
 
-class CommandGroupBase;
-typedef std::shared_ptr<CommandGroupBase> CommandGroupBaseSPtr;
+class GroupCommand
+{
+public:
+    GroupCommand(ScriptCommand&& h, ScriptCommand&& t, Script&& b, const CommandGroupTraitSPtr& tt);
+    MainReturn execute(const ContextSPtr& context) const;
+
+private:
+    ScriptCommand head_;
+    ScriptCommand tail_;
+    std::shared_ptr<const Script> body_;
+    CommandGroupTraitSPtr trait_;
+};
 
 class Script
 {
-    typedef boost::variant<ScriptCommand, CommandGroupBaseSPtr> Unit;
+    class Unit: public boost::variant<ScriptCommand, GroupCommand>
+    {
+        typedef boost::variant<ScriptCommand, GroupCommand> BaseThis;
+    public:
+		Unit(ScriptCommand&& sc)
+            :BaseThis(std::move(sc))
+        {}
+
+		Unit(GroupCommand&& gc)
+			:BaseThis(std::move(gc))
+		{}
+
+
+    };
 public:
     typedef std::vector<Unit> Container;
 
@@ -185,8 +221,6 @@ public:
         :script_(std::move(s))
     {}
 
-    typedef std::function<bool (std::istream&, ScriptCommand& )> BreakCond;
-
     static bool load(std::istream& strm, Script& spt);
 
     void push(Unit&& u)
@@ -194,50 +228,18 @@ public:
         script_.emplace_back(std::move(u));
     }
 
-    MainReturn execute(const ContextSPtr& context);
-
+    MainReturn execute(const ContextSPtr& context) const;
 
 private:
     Container script_;
 };
 
-class GroupPointBase: public CmdBase
-{
-public:
-    GroupPointBase(ScriptCommand&& sc, const char* msg)
-        :CmdBase(msg), sc_(std::move(sc))
-    {}
-
-    MainReturn execute(const ContextSPtr& ctx)
-    {
-        return sc_.execute(ctx, *this);
-    }
-
-    MainReturn doit() override
-    {
-        return MainReturn::eGood;
-    }
-
-    void oldContextSet(const ContextSPtr& old)
-    {
-        oldCtx_=old;
-    }
-
-    const ContextSPtr& oldContextGet() const
-    {
-        return oldCtx_;
-    }
-
-private:
-    ContextSPtr oldCtx_;
-    ScriptCommand sc_;
-};
-
+//CommandGroup 主要作为 命令组 基类使用
 class CommandGroupBase
 {
 public:
-    CommandGroupBase(Script&& s)
-        :script_(std::move(s))
+    CommandGroupBase(const Script& s)
+        :script_(s)
     {}
 
     virtual MainReturn execute(const ContextSPtr& context) = 0;
@@ -245,18 +247,13 @@ public:
     virtual ~CommandGroupBase()
     {}
 
-    Script& scriptGet()
-    {
-        return script_;
-    }
-
     const Script& scriptGet() const
     {
         return script_;
     }
 
 private:
-    Script script_;
+    const Script& script_;
 };
 
 template<typename Obj, typename Base=CommandGroupBase>
@@ -272,8 +269,8 @@ class CommandGroup: public Base
         return static_cast<Obj&>(*this);
     }
 public:
-    CommandGroup(Script&& s)
-        :Base(std::move(s))
+    CommandGroup(const Script& s)
+        :Base(s)
     {}
 
     MainReturn execute(const ContextSPtr& context)
@@ -302,29 +299,16 @@ public:
         return e.execute(ctx);
     }
 
-    static std::unique_ptr<CommandGroupBase> create(ScriptCommand&& b, Script&& s, ScriptCommand&& e)
+    static std::unique_ptr<CommandGroupBase> create(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
     {
-        return std::unique_ptr<CommandGroupBase>(new Obj(std::move(b), std::move(s), std::move(e)));
+        return std::unique_ptr<CommandGroupBase>(new Obj(b, s, e));
     }
 
 };
 
 class CommandGroupDict
 {
-    typedef std::function<std::unique_ptr<CommandGroupBase>(ScriptCommand&&, Script&&, ScriptCommand&& )> GroupCreate;
-    struct Unit
-    {
-        std::string begin;
-        std::string end;
-        GroupCreate create;
-
-        bool operator<(const Unit& o) const
-        {
-            return begin<o.begin;
-        }
-    };
-
-    typedef std::set<Unit> Dict;
+    typedef std::map<std::string, CommandGroupTraitSPtr> Dict;
 
     CommandGroupDict()=default;
 public:
@@ -335,21 +319,21 @@ public:
         return gs;
     }
 
-    const Unit* find(const std::string& begin) const
+    CommandGroupTraitSPtr find(const std::string& head) const
     {
-        const auto itr=sets_.find(Unit{begin, std::string(), GroupCreate()});
-        if(itr==sets_.end())
+        const auto itr=dict_.find(head);
+        if(itr==dict_.end())
             return nullptr;
-        return &*itr;
+        return itr->second;
     }
 
-    void insert(const std::string& b, const std::string& e, GroupCreate&& c)
+    void insert(const std::string& b, const std::string& e, CommandGroupCreate&& c)
     {
-        sets_.insert(Unit{b, e, c});
+        dict_[b]=CommandGroupTraitSPtr(new CommandGroupTrait{b, e, std::move(c)});
     }
 
 private:
-    Dict sets_;
+    Dict dict_;
 };
 
 template<typename G>
@@ -362,8 +346,37 @@ struct CommandGroupRegister
     }
 };
 
+class GroupPointBase: public CmdBase
+{
+public:
+    GroupPointBase(const ScriptCommand& sc, const char* msg)
+        :CmdBase(msg), sc_(sc)
+    {}
 
+    MainReturn execute(const ContextSPtr& ctx)
+    {
+        return sc_.execute(ctx, *this);
+    }
 
+    MainReturn doit() override
+    {
+        return MainReturn::eGood;
+    }
+
+    void oldContextSet(const ContextSPtr& old)
+    {
+        oldCtx_=old;
+    }
+
+    const ContextSPtr& oldContextGet() const
+    {
+        return oldCtx_;
+    }
+
+private:
+    ContextSPtr oldCtx_;
+    const ScriptCommand& sc_;
+};
 
 
 }  //namespace ezsh

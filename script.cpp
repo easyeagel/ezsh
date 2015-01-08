@@ -22,7 +22,7 @@
 namespace ezsh
 {
 
-void ScriptCommand::cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest)
+void ScriptCommand::cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest) const
 {
     const auto sz=cmd.size();
     if(dest.size()!=sz)
@@ -37,13 +37,13 @@ void ScriptCommand::cmdlineReplace(const ContextSPtr& context, const StrCommandL
     }
 }
 
-MainReturn ScriptCommand::execute(const ContextSPtr& context)
+MainReturn ScriptCommand::execute(const ContextSPtr& context) const
 {
     const auto& cmd=traitGet()->create();
     return execute(context, *cmd);
 }
 
-MainReturn ScriptCommand::execute(const ContextSPtr& context, CmdBase& cmd)
+MainReturn ScriptCommand::execute(const ContextSPtr& context, CmdBase& cmd) const
 {
     CommandLine args;
     StrCommandLine strArgs;
@@ -67,6 +67,18 @@ MainReturn ScriptCommand::execute(const ContextSPtr& context, CmdBase& cmd)
     if(ret.good())
         ret=cmd.doit();
     return ret;
+}
+
+GroupCommand::GroupCommand(ScriptCommand&& h, ScriptCommand&& t, Script&& b, const CommandGroupTraitSPtr& tt)
+    : head_(std::move(h)), tail_(std::move(t))
+    , body_(std::shared_ptr<Script>(new Script(std::move(b))))
+    , trait_(tt)
+{}
+
+MainReturn GroupCommand::execute(const ContextSPtr& context) const
+{
+    auto const ptr=trait_->create(head_, *body_, tail_);
+    return ptr->execute(context);
 }
 
 class ScriptLoad
@@ -129,7 +141,7 @@ public:
             unit_.traitSet(trait);
 
             spt.push(std::move(unit_));
-			unit_.reset(); //MSVC 没有正确实现移到构造
+            unit_.reset(); //MSVC 没有正确实现移到构造
 
             //或达到文件结尾
             if(!strm)
@@ -162,11 +174,16 @@ public:
             return false;
 
         Script group;
-        ScriptLoad sl(u->end);
+        ScriptLoad sl(u->tail);
         sl.line_=std::move(line_);
         if(sl.load(strm, group)==false)
             return false;
-        spt.push(u->create(std::move(unit_), std::move(group), std::move(sl.unit_)));
+
+        spt.push(GroupCommand(std::move(unit_), std::move(sl.unit_), std::move(group), u));
+        unit_.reset();
+        if(!sl.line_.empty())
+            unit_.lineAppend(sl.line_);
+
         return true;
     }
 
@@ -178,14 +195,13 @@ private:
     ScriptCommand unit_;
 };
 
-
 bool Script::load(std::istream& strm, Script& spt)
 {
     ScriptLoad sl;
     return sl.load(strm, spt);
 }
 
-MainReturn Script::execute(const ContextSPtr& context)
+MainReturn Script::execute(const ContextSPtr& context) const
 {
     for(auto& ptr: script_)
     {
@@ -198,10 +214,10 @@ MainReturn Script::execute(const ContextSPtr& context)
             continue;
         }
 
-        auto const cg=boost::get<CommandGroupBaseSPtr>(&ptr);
+        auto const cg=boost::get<GroupCommand>(&ptr);
         if(cg!=nullptr)
         {
-            const auto ret=(*cg)->execute(context);
+            const auto ret=cg->execute(context);
             if(ret.bad())
                 return ret;
             continue;
