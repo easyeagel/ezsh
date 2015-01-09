@@ -168,9 +168,10 @@ public:
     }
 
     VarSPtr get(const std::string& name) const;
+    std::string stringGet(const std::string& name) const;
 
     //xxxx${varName, N}xxxx
-    void replace(const std::string& str, StrCommandLine& dest) const;
+    void stringReplace (const std::string& str, std::string& dest) const;
     void cmdlineReplace(const StrCommandLine& cmd, StrCommandLine& dest) const;
 
     template<typename C=Context>

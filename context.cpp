@@ -130,62 +130,56 @@ VarSPtr Context::get(const std::string& name) const
     return nullptr;
 }
 
-void Context::replace(const std::string& str, StrCommandLine& dest) const
+std::string Context::stringGet(const std::string& name) const
 {
-    bool ret=true;
-    namespace bx=boost::xpressive;
-    std::string d;
-    bx::regex_replace(std::back_inserter(d), str.begin(), str.end(), xpr::gsReplacePattern,
-        [this, &ret](const bx::smatch& match) -> std::string
+    auto ptr=get(name);
+    if(!ptr)
+        return std::string();
+
+    auto const strVal=boost::get<VarString>(ptr.get());
+    if(strVal!=nullptr)
+        return *strVal;
+
+    auto const listVal=boost::get<VarList>(ptr.get());
+    if(listVal->empty())
+        return std::string();
+
+    return listVal->front();
+}
+
+void Context::stringReplace(const std::string& str, std::string& dest) const
+{
+    xpr::regex_replace(std::back_inserter(dest), str.begin(), str.end(), xpr::gsReplacePattern,
+        [this](const xpr::smatch& match) -> std::string
         {
             std::vector<std::string> result;
             xpr::replacePattern(match, std::back_inserter(result));
 
             const auto& name=result[0];
-            std::string value;
-
-            //逐层向上查找
-            auto ctx=shared_from_this();
-            while(ctx)
-            {
-                auto const itr=ctx->vars_.find(name);
-                if(itr==ctx->vars_.end())
-                {
-                    ctx=ctx->frontGet();
-                    continue;
-                }
-
-                const auto var=itr->second.get();
-                auto const strVal=boost::get<VarString>(var);
-                if(strVal!=nullptr)
-                {
-                    value=*strVal;
-                    break;
-                }
-
-                auto const listVal=boost::get<VarList>(var);
-                value=listVal->front();
-            }
+            std::string value=stringGet(name);
 
             if(result.size()==1)
-            {
-                ret=value.empty();
                 return std::move(value);
-            }
 
             ContextReplace cr;
             return cr.replace(value, result);
         }
     );
-
-    dest.emplace_back(std::move(d));
 }
 
 void Context::cmdlineReplace(const StrCommandLine& cmd, StrCommandLine& dest) const
 {
-    dest.clear();
-    for(const auto& c: cmd)
-        replace(c, dest);
+    const auto size=cmd.size();
+    dest.resize(size);
+
+    for(size_t i=0; i<size; ++i)
+    {
+        auto& d=dest[i];
+        const auto& s=cmd[i];
+
+        d.clear();
+        stringReplace(s, d);
+    }
 }
 
 namespace
