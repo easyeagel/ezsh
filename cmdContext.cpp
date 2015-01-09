@@ -33,8 +33,8 @@ public:
         :BaseThis("context - contrl current context")
     {
         opt_.add_options()
-            ("set",  bp::value<std::vector<std::string>>(), "set context var")
-            ("echo", bp::value<std::vector<std::string>>(), "echo this params")
+            ("set",  bp::value<std::vector<std::string>>()->multitoken(), "set context var")
+            ("echo", bp::value<std::vector<std::string>>()->multitoken(), "echo this params")
         ;
     }
 

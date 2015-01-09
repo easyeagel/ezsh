@@ -30,74 +30,9 @@
 namespace ezsh
 {
 
-class CmdLineSeparator
-{
-    typedef std::string::iterator Itr;
-public:
-    template<typename Out>
-    bool operator()(Itr& next, Itr end, Out&& out)
-    {
-        skipBlank(next, end);
-        if(next==end)
-            return false;
-
-        start_=next;
-        while(next!=end)
-        {
-            switch(*next)
-            {
-                case '"':
-                {
-                    escaped_=!escaped_;
-                    break;
-                }
-                case ' ':
-                case '\t':
-                {
-                    if(escaped_==false)
-                    {
-                        out(start_, next++);
-                        return true;
-                    }
-
-                    break;
-                }
-                default:
-                    break;
-            }
-
-            ++next;
-        }
-
-        if(escaped_)
-            return false;
-        out(start_, end);
-        return true;
-    }
-
-    void reset()
-    {
-        start_=Itr();
-        escaped_=false;
-    }
-
-private:
-    void skipBlank(Itr& next, Itr end)
-    {
-        while(next!=end && std::isspace(*next))
-            ++next;
-    }
-
-private:
-    Itr start_;
-    bool escaped_=false;
-};
-
 class Script;
 class ScriptCommand;
 class CommandGroupBase;
-typedef std::vector<char*> CommandLine;
-typedef std::vector<std::string> StrCommandLine;
 typedef std::function<std::unique_ptr<CommandGroupBase>(const ScriptCommand&, const Script&, const ScriptCommand& )> CommandGroupCreate;
 
 struct CommandGroupTrait
@@ -112,27 +47,7 @@ typedef std::shared_ptr<CommandGroupTrait> CommandGroupTraitSPtr;
 class ScriptCommand
 {
 public:
-    bool tokenize()
-    {
-        CmdLineSeparator sep;
-        auto itr=line_.begin();
-        const auto end=line_.end();
-        for(;;)
-        {
-            const auto ret=sep(itr, end,
-                [this](std::string::iterator s, std::string::iterator e)
-                {
-                    args_.emplace_back(s, e);
-                }
-            );
-
-            if(ret==false)
-                return false;
-
-            if(itr==end)
-                return true;
-        }
-    }
+    bool tokenize();
 
     void lineAppend(const std::string& s)
     {
@@ -175,8 +90,6 @@ public:
 
     MainReturn execute(const ContextSPtr& context) const;
     MainReturn execute(const ContextSPtr& context, CmdBase& cmd) const;
-private:
-    void cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest) const;
 
 private:
     std::string line_;

@@ -34,6 +34,17 @@
 namespace ezsh
 {
 
+typedef std::vector<char*> CommandLine;
+typedef std::vector<std::string> StrCommandLine;
+
+static inline CommandLine cmdlineMake(const StrCommandLine& sc)
+{
+    CommandLine ret;
+    for(auto& s: sc)
+        ret.push_back(const_cast<char*>(s.data()));
+    return std::move(ret);
+}
+
 typedef std::string VarString;
 typedef std::vector<std::string> VarList;
 
@@ -158,18 +169,9 @@ public:
 
     VarSPtr get(const std::string& name) const;
 
-    bool replace(std::string& str) const
-    {
-        std::string tmp;
-        auto const ret=replace(str, tmp);
-        if(ret==false)
-            return false;
-        str=tmp;
-        return true;
-    }
-
     //xxxx${varName, N}xxxx
-    bool replace(const std::string& str, std::string& dest) const;
+    void replace(const std::string& str, StrCommandLine& dest) const;
+    void cmdlineReplace(const StrCommandLine& cmd, StrCommandLine& dest) const;
 
     template<typename C=Context>
     ContextSPtr alloc()
@@ -187,10 +189,7 @@ private:
 
 class ContextStack
 {
-    ContextStack()
-    {
-        stack_.emplace_back(ContextSPtr(new Context));
-    }
+    ContextStack();
 public:
     const ContextSPtr& top() const
     {

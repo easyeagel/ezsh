@@ -22,18 +22,115 @@
 namespace ezsh
 {
 
-void ScriptCommand::cmdlineReplace(const ContextSPtr& context, const StrCommandLine& cmd, StrCommandLine& dest) const
+class CmdLineSeparator
 {
-    const auto sz=cmd.size();
-    if(dest.size()!=sz)
-        dest.resize(sz);
-
-    for(size_t i=0; i<sz; ++i)
+    typedef std::string::iterator Itr;
+public:
+    template<typename Out>
+    bool operator()(Itr& next, Itr const end, Out&& out)
     {
-        const auto& s=cmd[i];
-        auto& d=dest[i];
-        d.clear();
-        context->replace(s, d);
+        skipBlank(next, end);
+        if(next==end)
+            return false;
+
+        start_=next;
+        end_=next;
+        while(next!=end)
+        {
+            switch(*next)
+            {
+                case '"':
+                {
+                    nextColon(next, end);
+                    break;
+                }
+                case ' ':
+                case '\t':
+                {
+                    out(start_, end_);
+                    skipBlank(next, end);
+                    start_=next;
+                    end_=next;
+                    break;
+                }
+                default:
+                {
+                    if(end_!=next)
+                    {
+                        *end_++=*next++;
+                    } else {
+                        ++end_;
+                        ++next;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if(ret==false)
+            return false;
+
+        if(start_!=end_)
+            out(start_, end_);
+        return true;
+    }
+
+    void reset()
+    {
+        start_=Itr();
+        end_=start_;
+        ret=true;
+    }
+
+private:
+    void skipBlank(Itr& next, Itr const end)
+    {
+        while(next!=end && std::isspace(*next))
+            ++next;
+    }
+
+    void nextColon(Itr& next, Itr const end)
+    {
+        ++next;
+        while(next!=end)
+        {
+            if(*next=='"')
+            {
+                ++next;
+                return;
+            }
+
+            *end_++=*next++;
+        }
+
+        ret=false;
+    }
+
+private:
+    Itr start_;
+    Itr end_;
+    bool ret=true;
+};
+
+bool ScriptCommand::tokenize()
+{
+    CmdLineSeparator sep;
+    auto itr=line_.begin();
+    const auto end=line_.end();
+    for(;;)
+    {
+        const auto ret=sep(itr, end,
+            [this](std::string::iterator s, std::string::iterator e)
+            {
+                args_.emplace_back(s, e);
+            }
+        );
+
+        if(ret==false)
+            return false;
+
+        if(itr==end)
+            return true;
     }
 }
 
@@ -47,7 +144,7 @@ MainReturn ScriptCommand::execute(const ContextSPtr& context, CmdBase& cmd) cons
 {
     CommandLine args;
     StrCommandLine strArgs;
-    cmdlineReplace(context, cmdlineGet(), strArgs);
+    context->cmdlineReplace(cmdlineGet(), strArgs);
     std::for_each(strArgs.begin(), strArgs.end(),
         [&args](const std::string& s)
         {

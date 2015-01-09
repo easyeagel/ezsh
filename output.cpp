@@ -71,6 +71,10 @@ void OutPut::init(const bp::variables_map& vm)
         tree_=true;
 
     extPop_=vm.count("outExtPop")>=1 ? true : false;
+
+    Path dir(outDir_);
+    if(!dir.empty() && !bf::exists(dir.path()))
+        bf::create_directories(dir.path());
 }
 
 void OutPut::rewrite(const FileUnit& src, FileUnit& dest)

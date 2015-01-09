@@ -72,6 +72,7 @@ struct MainReturn
         eBadStart=64,
         eNotAllowed,
         eParamInvalid,
+        eUnkownCommand,
     };
 
     bool good() const

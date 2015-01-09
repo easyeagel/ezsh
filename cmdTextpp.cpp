@@ -18,25 +18,13 @@
 
 #include"option.hpp"
 #include"output.hpp"
+#include"parser.hpp"
 #include"fileset.hpp"
 #include<boost/algorithm/string.hpp>
 #include<boost/xpressive/xpressive.hpp>
 
 namespace ezsh
 {
-
-namespace xpr
-{
-    using namespace boost::xpressive;
-    
-    static sregex gsMacroName  = (alpha|'_') >> *(alnum|'_');
-    static sregex gsNotComma   =~(set=',','}');
-    static sregex gsNotCommaStr=+gsNotComma;
-    static sregex gsTextpp=as_xpr("${")
-        >> *blank >> gsNotCommaStr
-        >> *(*blank >> ',' >> *blank >> gsNotCommaStr)
-        >> *blank >> '}';
-}
 
 class CmdTextpp:public CmdBaseT<CmdTextpp, FileSetCmdBase<OutPutCmdBase<>>>
 {
@@ -145,24 +133,11 @@ private:
         std::istreambuf_iterator<char> const end;
         std::copy(itr, end, std::back_inserter(in));
 
-        xpr::regex_replace(out, in.begin(), in.end(), xpr::gsTextpp,
+        xpr::regex_replace(out, in.begin(), in.end(), xpr::gsReplacePattern,
             [this](const xpr::smatch& what, std::ostreambuf_iterator<char>& out) -> OutItr
             {
-                auto begin = what.nested_results().begin();
-                auto end   = what.nested_results().end();
-
-                xpr::sregex_id_filter_predicate name(xpr::gsNotCommaStr.regex_id());
-
                 std::vector<std::string> result;
-                std::for_each(
-                    boost::make_filter_iterator(name, begin, end),
-                    boost::make_filter_iterator(name, end, end),
-                    [&result](const xpr::smatch& m)
-                    {
-                        result.push_back(m.str());
-                    }
-                );
-
+                xpr::replacePattern(what, std::back_inserter(result));
                 return matchOne(what, result, out);
             }
         );
