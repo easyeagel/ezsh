@@ -17,6 +17,7 @@
 //
 
 #include"option.hpp"
+#include"output.hpp"
 #include"fileset.hpp"
 #include<boost/algorithm/string.hpp>
 #include<boost/xpressive/xpressive.hpp>
@@ -37,7 +38,7 @@ namespace xpr
         >> *blank >> '}';
 }
 
-class CmdTextpp:public CmdBaseT<CmdTextpp, FileSetCmdBase<>>
+class CmdTextpp:public CmdBaseT<CmdTextpp, FileSetCmdBase<OutPutCmdBase<>>>
 {
     typedef CmdBaseT<CmdTextpp, FileSetCmdBase> BaseThis;
     typedef std::ostreambuf_iterator<char> OutItr;
@@ -48,7 +49,6 @@ public:
         opt_.add_options()
             ("force,f",  "ignore nonexistent files and arguments")
             ("define,D", bp::value<std::vector<std::string>>(), "define a macro")
-            ("output",   bp::value<std::string>(), "output file name")
         ;
     }
 
@@ -71,6 +71,10 @@ public:
         auto& files=fileGet();
         files.init(vm);
 
+        auto& output=outGet();
+        output.init(vm);
+
+        FileUnit outPath;
         for(const auto& file: files.setGet())
         {
             if(!file.isExist() || file.isDir())
@@ -85,11 +89,12 @@ public:
             if(!strm)
                 continue;
 
-            if(out.empty())
+            output.rewrite(file, outPath);
+            if(outPath.total.empty())
             {
                 fileOne(strm, OutItr(std::cout));
             } else {
-                bf::ofstream ostrm(Path(out).path());
+                bf::ofstream ostrm(outPath.total.path());
                 if(!ostrm)
                     continue;
                 fileOne(strm, OutItr(ostrm));

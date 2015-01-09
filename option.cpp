@@ -18,6 +18,7 @@
 
 #include<cstdlib>
 #include<boost/algorithm/string/split.hpp>
+#include<boost/algorithm/string/case_conv.hpp>
 
 #include"option.hpp"
 #include"filesystem.hpp"
@@ -116,27 +117,40 @@ CmdBase::~CmdBase()
 Environment::Environment()
 {
 #ifdef WIN32
-    const wchar_t* const* env=::_wenviron;
-    for(; *env!=nullptr; ++env)
+    const wchar_t* env=::GetEnvironmentStringsW();
+	if (env==nullptr)
+		return;
+
+    for(;;)
     {
-        const wchar_t* str=*env;
+		if (*env == 0)
+			break;
+
+        const wchar_t* str=env;
         const wchar_t* strend=str+std::wcslen(str);
+        env=strend+1;
+
         auto const equ=std::find(str, strend, L'=');
-        if(equ==strend)
+        if(equ==strend || equ==str)
             continue;
-        maps_[WCharConverter::to(std::wstring(str, equ))]=WCharConverter::to(std::wstring(equ+1, strend));
+		std::string key = WCharConverter::to(std::wstring(str, equ));
+		boost::algorithm::to_lower(key);
+		maps_[key] = WCharConverter::to(std::wstring(equ + 1, strend));
     }
 
-    const std::string paths=maps_["PATH"];
-    if(paths.empty())
+    if(maps_.empty())
         return;
+
+    const std::string paths=maps_["path"];
+	if (paths.empty())
+		return;
+
 
     boost::algorithm::split(paths_, paths,
         [](char c){ return c==';'; },
         boost::algorithm::token_compress_mode_type::token_compress_on
     );
 #else
-
     const char* const* env=::environ;
     for(; *env!=nullptr; ++env)
     {
@@ -160,23 +174,18 @@ Environment::Environment()
 
 }
 
-std::string Environment::pathFile(const std::string& file) const
+Path Environment::pathFile(const Path& file) const
 {
     for(const auto& p: paths_)
     {
-        std::string t=p;
-        if(!t.empty() && t.back()!='/')
-            t.push_back('/');
-        t.append(file);
-
-        const Path path(t);
+        const Path path=Path(p)/file;
         boost::system::error_code ec;
         const auto st=bf::status(path, ec);
-        if(st.type()!=bf::file_type::file_not_found && (st.permissions() & bf::perms::owner_exe))
+        if(!ec && st.type()!=bf::file_type::file_not_found)
 			return std::move(WCharConverter::to(path.native()));
     }
 
-    return std::string();
+    return Path();
 }
 
 }  // namespace ezsh

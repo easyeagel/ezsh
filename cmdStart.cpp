@@ -151,22 +151,37 @@ private:
         return true;
     }
 
-    std::string exeFind(const std::string& file)
+    Path exeFind(const Path& file)
     {
-		std::string adjustFile = file;
-#ifdef WIN32
-		return adjustFile;
-#else
-		//相对路径不查找
-		const char* st[] = { ".", "/" };
-		for (const auto s : st)
-		{
-			if (boost::algorithm::starts_with(adjustFile, s))
-				return adjustFile;
-		}
+        if(!file.parent_path().empty())
+            return file;
 
+#ifdef WIN32
+		std::vector<Path> adjustFile;
+		const auto& ext = file.extension();
+		if (ext == "exe" || ext == "bat" || ext == "cmd")
+		{
+			adjustFile.emplace_back(file);
+		} else {
+			adjustFile.emplace_back(Path(file).concat(".exe"));
+			adjustFile.emplace_back(Path(file).concat(".bat"));
+			adjustFile.emplace_back(Path(file).concat(".cmd"));
+		}
+#else
+		std::vector<Path> adjustFile = { file };
+#endif //WIN32
 		const auto& env = Environment::instance();
-		return env.pathFile(adjustFile);
+        for(const auto& p: adjustFile)
+        {
+            auto const path=env.pathFile(p);
+            if(!path.empty())
+                return path;
+        }
+
+#ifdef WIN32
+        return file;
+#else
+        return Path();
 #endif //WIN32
     }
 
@@ -193,7 +208,7 @@ private:
 		info.dwFlags |= STARTF_USESTDHANDLES;
     }
 
-    int start(const std::string& exe, CmdLine& cl)
+    int start(const Path& exe, CmdLine& cl)
     {
 		Path path(exe);
 		path.make_preferred();
@@ -230,7 +245,7 @@ private:
 			&pi )           // Pointer to PROCESS_INFORMATION structure
 		) 
 		{
-			stdErr() << "CreateProcess failed: " << ::GetLastError() << std::endl;
+			stdErr() << cmd << ": CreateProcess failed: " << ::GetLastError() << std::endl;
 			return -1;
 		}
 
@@ -257,7 +272,7 @@ private:
         ::dup2(fd, STDOUT_FILENO);
     }
 
-    int start(const std::string& exe, CmdLine& cmd)
+    int start(const Path& exe, CmdLine& cmd)
     {
         cmd.push_back(nullptr);
 

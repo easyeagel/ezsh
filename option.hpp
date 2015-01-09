@@ -338,7 +338,7 @@ public:
         return gs;
     }
 
-    std::string pathFile(const std::string& file) const;
+    Path pathFile(const Path& file) const;
 
 private:
     std::vector<std::string> paths_;

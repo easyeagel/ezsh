@@ -31,6 +31,7 @@ namespace bf=boost::filesystem;
 
 struct FileUnit
 {
+    FileUnit()=default;
     FileUnit(const Path& selfIn, const Path& baseIn=Path(), bool scanedIn=false);
 
     static Path normalize(const Path& path);
