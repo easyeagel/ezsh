@@ -51,11 +51,6 @@ public:
 
         optionDoit();
         const bool force=vm.count("force") ? true : false;
-        std::string out;
-        auto itr=vm.find("output");
-        if(itr!=vm.end())
-            out=itr->second.as<std::string>();
-
         auto& files=fileGet();
         files.init(vm);
 
@@ -80,12 +75,14 @@ public:
             output.rewrite(file, outPath);
             if(outPath.total.empty())
             {
-                fileOne(strm, OutItr(std::cout));
+                OutItr out(std::cout);
+                fileOne(strm, out);
             } else {
                 bf::ofstream ostrm(outPath.total.path());
                 if(!ostrm)
                     continue;
-                fileOne(strm, OutItr(ostrm));
+                OutItr out(ostrm);
+                fileOne(strm, out);
             }
         }
 
@@ -126,46 +123,64 @@ private:
         }
     }
 
-    OutItr fileOne(std::istream& strm, OutItr out) const
+    void fileOne(std::istream& strm, OutItr& out) const
     {
         std::string in;
         std::istreambuf_iterator<char> itr(strm);
         std::istreambuf_iterator<char> const end;
         std::copy(itr, end, std::back_inserter(in));
 
-        xpr::regex_replace(out, in.begin(), in.end(), xpr::gsReplacePattern,
-            [this](const xpr::smatch& what, std::ostreambuf_iterator<char>& out) -> OutItr
+        xpr::regex_replace(out, in.begin(), in.end(), ReplacePattern::regexGet(),
+            [this](const xpr::smatch& what, OutItr& out) -> OutItr
             {
-                std::vector<std::string> result;
-                xpr::replacePattern(what, std::back_inserter(result));
-                return matchOne(what, result, out);
+                ReplacePattern rp;
+                rp.init(what);
+                matchOne(rp, out);
+                return out;
             }
         );
-
-        return out;
     }
 
-    OutItr matchOne(const xpr::smatch& what, const std::vector<std::string>& match, OutItr out) const
+    void matchOne(const ReplacePattern& match, OutItr& out) const
     {
-        if(match.size()==1) //简单宏替换
+        for(const auto& opt: match.operatorsGet())
         {
-            auto const itr=dict_.find(match.front());
+            if(opt.name=="replace")
+            {
+                macroReplace(opt, out);
+                continue;
+            }
+
+            if(opt.name=="include")
+            {
+                includeReplace(opt, out);
+                continue;
+            }
+        }
+    }
+
+    void macroReplace(const ReplacePattern::Operator& opt, OutItr& out) const
+    {
+        for(const auto& param: opt.params)
+        {
+            auto const itr=dict_.find(param.value);
             if(itr!=dict_.end())
             {
                 auto const& s=itr->second;
                 std::copy(s.begin(), s.end(), out);
-                return out;
+                continue;
             }
-        } else if(match[1]=="include") {
-            Path path=simpleReplace(match[0]);
-            bf::ifstream strm(path.path());
-            if(strm)
-                return fileOne(strm, out);
         }
+    }
 
-        const auto& s=what.str();
-        std::copy(s.begin(), s.end(), out);
-        return out;
+    void includeReplace(const ReplacePattern::Operator& opt, OutItr& out) const
+    {
+        for(const auto& param: opt.params)
+        {
+            Path path=simpleReplace(param.value);
+            bf::ifstream strm(path.path());
+            fileOne(strm, out);
+        }
     }
 
     std::string simpleReplace(const std::string& str) const

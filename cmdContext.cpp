@@ -18,6 +18,7 @@
 
 #include<boost/algorithm/string/trim.hpp>
 
+#include"parser.hpp"
 #include"option.hpp"
 #include"context.hpp"
 
@@ -63,29 +64,23 @@ private:
     {
         for(const auto& s: sets)
         {
-            std::string key;
-            std::string val;
-            auto const pos=s.find('=');
-            if(pos==std::string::npos)
-            {
-                key=s;
-            } else {
-                key=s.substr(0, pos);
-                val=s.substr(pos+1);
-            }
-
-            boost::algorithm::trim(key);
-            boost::algorithm::trim(val);
-
-            contextGet()->set(key, VarSPtr(new Variable(val)));
+            const auto& p=simpleSplit(s, '=');
+            contextGet()->set(p.first, VarSPtr(new Variable(p.second)));
         }
     }
 
     void echoDo(const std::vector<std::string>& echos)
     {
-        for(const auto& s: echos)
-            stdOut() << s;
-        stdOut() << std::endl;
+        if(echos.empty())
+        {
+            stdOut() << std::endl;
+            return;
+        }
+
+        const auto size=echos.size()-1;
+        for(size_t i=0; i<size; ++i)
+            stdOut() << echos[i] << ' ';
+        stdOut() << echos.back() << std::endl;
     }
 };
 

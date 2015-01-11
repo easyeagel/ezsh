@@ -18,6 +18,7 @@
 
 #include"context.hpp"
 
+#include"script.hpp"
 #include"parser.hpp"
 #include"filesystem.hpp"
 #include<boost/xpressive/xpressive.hpp>
@@ -30,54 +31,106 @@ namespace ezsh
 class ContextReplace
 {
 public:
-    std::string replace(const std::string& val, const std::vector<std::string>& pattern);
+    std::string replace(const Context& ctx, const ReplacePattern& rp, bool splited, StrCommandLine& dest);
 
 private:
-    typedef std::string (ContextReplace::*CallType)(const std::string& val, const std::vector<std::string>& pattern);
+    typedef std::string (ContextReplace::*CallType)
+        (const Context& ctx, const ReplacePattern::Operator& opt, bool splited, StrCommandLine& dest);
 
     //执行匹配返回
-    //格式: [val][math][default][otherMath]
-    std::string matchReplace(const std::string& val, const std::vector<std::string>& pattern)
+    //格式: [@match][var][default][otherMatch]...
+    std::string matchReplace(const Context& ctx, const ReplacePattern::Operator& opt, bool splited, StrCommandLine& dest)
     {
-        const auto& macth=val.empty() ? pattern[0] : val;
-        const auto psize=pattern.size();
-        if(psize<=2)
-            return val;
+        const auto& params=opt.params;
+        const auto& match=ctx.stringGet(params[0].value);
+        const auto psize=params.size();
+        if(psize<=1)
+            return result(match, splited, dest);
 
-        const auto& defaultVal=pattern[2];
-        if(psize==3)
-            return defaultVal;
+        const auto& defaultVal=params[1];
+        if(psize==2)
+            return result(std::move(defaultVal.value), splited, dest);
 
         std::vector<std::pair<std::string, std::string>> symble;
-        for(size_t i=3; i<psize; ++i)
-            symble.emplace_back(simpleSplit(pattern[i], ':'));
+        for(size_t i=2; i<psize; ++i)
+            symble.emplace_back(simpleSplit(params[i].value, ':'));
 
         auto const itr=std::find_if(symble.begin(), symble.end(),
-            [&val](const std::pair<std::string, std::string>& u)
+            [&match](const std::pair<std::string, std::string>& u)
             {
-                return boost::algorithm::iequals(u.first, val);
+                return boost::algorithm::iequals(u.first, match);
             }
         );
 
         if(itr==symble.end())
-            return defaultVal;
-        return itr->second;
+            return result(std::move(defaultVal.value), splited, dest);
+        return result(std::move(itr->second), splited, dest);
     }
 
     //执行文件包含
-    //格式: [val][include]
-    std::string includeReplace(const std::string& val, const std::vector<std::string>& pattern)
+    //格式: [@include][var/val]...
+    std::string includeReplace(const Context& ctx, const ReplacePattern::Operator& opt, bool splited, StrCommandLine& dest)
     {
-        const auto& name=val.empty() ? pattern[0] : val;
-        bf::ifstream strm(Path(name).path());
-        if(!strm)
-            return val;
-
         std::string ret;
-        std::istreambuf_iterator<char> itr(strm);
-        std::istreambuf_iterator<char> const end;
-        std::copy(itr, end, std::back_inserter(ret));
-        return boost::algorithm::replace_all_copy(ret, "\n", " ");
+        for(const auto& param: opt.params)
+        {
+            const auto& name=
+                (param.type==ReplacePattern::eLiteral) ? param.value : ctx.stringGet(param.value, param.value);
+            bf::ifstream strm(Path(name).path());
+            if(!strm)
+                continue;
+
+            std::string str;
+            std::istreambuf_iterator<char> itr(strm);
+            std::istreambuf_iterator<char> const end;
+            std::copy(itr, end, std::back_inserter(str));
+            boost::algorithm::replace_all(str, "\n", " ");
+            if(!ret.empty() && !str.empty())
+                ret += ' ';
+            ret += str;
+        }
+
+        return result(ret, splited, dest);
+    }
+
+    //执行变量替换
+    //格式: [@replace][var]...
+    std::string replaceReplace(const Context& ctx, const ReplacePattern::Operator& opt, bool splited, StrCommandLine& dest)
+    {
+        std::string ret;
+        for(const auto& param: opt.params)
+        {
+            const auto& str=ctx.stringGet(param.value, param.value);
+            if(!ret.empty() && !str.empty())
+                ret += ' ';
+            ret += str;
+        }
+
+        return result(ret, splited, dest);
+    }
+
+    std::string result(std::string src, bool splited, StrCommandLine& dest)
+    {
+        if(splited==false)
+            return std::move(src);
+
+        CmdLineSeparator sep;
+        auto itr=src.begin();
+        const auto end=src.end();
+        for(;;)
+        {
+            auto const status=sep(itr, end,
+                [&dest](std::string::iterator s, std::string::iterator e)
+                {
+                    dest.emplace_back(s, e);
+                }
+            );
+
+            if(status==false || itr==end)
+                break;
+        }
+
+        return std::string();
     }
 
 private:
@@ -95,21 +148,32 @@ ContextReplace::Unit ContextReplace::dict_[]=
 #define MD(CppName, CppCall) {#CppName, &ContextReplace::CppCall},
     MD(match,   matchReplace)
     MD(include, includeReplace)
+    MD(replace, replaceReplace)
 #undef MD
 };
 
-std::string ContextReplace::replace(const std::string& val, const std::vector<std::string>& pattern)
+std::string ContextReplace::replace(const Context& ctx, const ReplacePattern& rp, bool splited, StrCommandLine& dest)
 {
-    auto const itr=std::find_if(std::begin(dict_), std::end(dict_),
-        [&pattern](const Unit& u)
-        {
-            return pattern[1]==u.name;
-        }
-    );
+    std::string ret;
+    for(const auto& op: rp.operatorsGet())
+    {
+        auto const itr=std::find_if(std::begin(dict_), std::end(dict_),
+            [&op](const Unit& u)
+            {
+                return op.name==u.name;
+            }
+        );
 
-    if(itr==std::end(dict_))
-        return val;
-    return (this->*itr->call)(val, pattern);
+        if(itr==std::end(dict_))
+            continue;
+
+        auto const tmp=(this->*itr->call)(ctx, op, splited, dest);
+        if(!ret.empty() && !tmp.empty())
+            ret += ' ';
+        ret += tmp;
+    }
+
+    return ret;
 }
 
 VarSPtr Context::get(const std::string& name) const
@@ -147,38 +211,43 @@ std::string Context::stringGet(const std::string& name) const
     return listVal->front();
 }
 
-void Context::stringReplace(const std::string& str, std::string& dest) const
+std::string Context::stringGet(const std::string& name, const std::string& def) const
 {
-    xpr::regex_replace(std::back_inserter(dest), str.begin(), str.end(), xpr::gsReplacePattern,
-        [this](const xpr::smatch& match) -> std::string
-        {
-            std::vector<std::string> result;
-            xpr::replacePattern(match, std::back_inserter(result));
+    auto ptr=get(name);
+    if(!ptr)
+        return def;
 
-            const auto& name=result[0];
-            std::string value=stringGet(name);
+    auto const strVal=boost::get<VarString>(ptr.get());
+    if(strVal!=nullptr)
+        return *strVal;
 
-            if(result.size()==1)
-                return std::move(value);
+    auto const listVal=boost::get<VarList>(ptr.get());
+    if(listVal->empty())
+        return def;
 
-            ContextReplace cr;
-            return cr.replace(value, result);
-        }
-    );
+    return listVal->front();
 }
 
 void Context::cmdlineReplace(const StrCommandLine& cmd, StrCommandLine& dest) const
 {
-    const auto size=cmd.size();
-    dest.resize(size);
-
-    for(size_t i=0; i<size; ++i)
+    dest.clear();
+    for(const auto& s: cmd)
     {
-        auto& d=dest[i];
-        const auto& s=cmd[i];
+        std::string d;
+        const auto currentSize=dest.size();
+        xpr::regex_replace(std::back_inserter(d), s.begin(), s.end(), ReplacePattern::regexGet(),
+            [this, &s, &dest](const xpr::smatch& match) -> std::string
+            {
+                ReplacePattern rp;
+                rp.init(match);
 
-        d.clear();
-        stringReplace(s, d);
+                ContextReplace cr;
+                return cr.replace(*this, rp, match.str()==s && rp.needSplit(), dest);
+            }
+        );
+
+        if(currentSize==dest.size())
+            dest.emplace_back(std::move(d));
     }
 }
 

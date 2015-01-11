@@ -36,26 +36,51 @@ namespace xpr
     extern sregex gsNotComma;
     extern sregex gsNotCommaStr;
     extern sregex gsReplacePattern;
+}
 
-    template<typename OutItr>
-    inline void replacePattern(const smatch& what, OutItr itr)
+class ReplacePattern
+{
+public:
+    enum Type
     {
-        auto begin = what.nested_results().begin();
-        auto end   = what.nested_results().end();
+        eList,
+        eValue,
+        eLiteral,
+    };
 
-        sregex_id_filter_predicate name(gsNotCommaStr.regex_id());
+    struct Param
+    {
+        Type type;
+        std::string value;
+    };
 
-        std::for_each(
-            boost::make_filter_iterator(name, begin, end),
-            boost::make_filter_iterator(name, end, end),
-            [&itr](const smatch& m)
-            {
-                *itr=m.str();
-            }
-        );
+    struct Operator
+    {
+        std::string name;
+        std::vector<Param> params;
+    };
+
+    static const xpr::sregex& regexGet()
+    {
+        return xpr::gsReplacePattern;
+    };
+
+    void init(const xpr::smatch& what);
+
+    const std::vector<Operator>& operatorsGet() const
+    {
+        return operators_;
     }
 
-}
+    bool needSplit() const
+    {
+        return needSplit_;
+    }
+
+private:
+    bool needSplit_=false;
+    std::vector<Operator> operators_;
+};
 
 static inline std::pair<std::string, std::string> simpleSplit(const std::string& str, char del='=')
 {
