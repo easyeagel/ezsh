@@ -43,47 +43,48 @@ public:
 
     MainReturn doit() override
     {
-        const auto& vm=mapGet();
         auto& files=fileGet();
+        const auto& vm=mapGet();
 
         files.init(vm);
-
+        files.scan();
         const bool force=vm.count("force") ? true : false;
         for(const auto& file: files.setGet())
-        {
-            if(!file.isExist())
-            {
-                if(force)
-                    continue;
-                stdErr() << file.total << ": not exist" << std::endl;
-                continue;
-            }
-
-            boost::system::error_code ec;
-            if(!file.isDir())
-            {
-                bf::remove(file.total, ec);
-                if(ec && !force)
-                    stdErr() << file.total << ": " << ec.message() << std::endl;
-                continue;
-            }
-
-            if(files.isRecursive())
-            {
-                bf::remove_all(file.total, ec);
-                if(ec && !force)
-                    stdErr() << file.total << ": " << ec.message() << std::endl;
-                continue;
-            }
-
-            bf::remove(file.total, ec);
-            if(ec && !force)
-                stdErr() << file.total << ": " << ec.message() << std::endl;
-        }
-
+            fileRemove(file, force);
         return MainReturn::eGood;
     }
 
+private:
+    void fileRemove(const FileUnit& file, bool force)
+    {
+        if(!file.isExist())
+        {
+            if(!force)
+                stdErr() << file.total << ": not exist" << std::endl;
+            return;
+        }
+
+        boost::system::error_code ec;
+        if(!file.isDir())
+        {
+            bf::remove(file.total, ec);
+            if(ec && !force)
+                stdErr() << file.total << ": " << ec.message() << std::endl;
+            return;
+        }
+
+        if(fileGet().isRecursive())
+        {
+            bf::remove_all(file.total, ec);
+            if(ec && !force)
+                stdErr() << file.total << ": " << ec.message() << std::endl;
+            return;
+        }
+
+        bf::remove(file.total, ec);
+        if(ec && !force)
+            stdErr() << file.total << ": " << ec.message() << std::endl;
+    }
 };
 
 namespace
