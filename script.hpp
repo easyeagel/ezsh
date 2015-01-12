@@ -61,6 +61,14 @@ public:
                     end_=next;
                     break;
                 }
+                case '\\':
+                {
+                    ++next;
+                    if(next==end)
+                        return false;
+                    *end_++=escape(*next++);
+                    continue;
+                }
                 default:
                 {
                     if(end_!=next)
@@ -108,10 +116,27 @@ private:
                 return;
             }
 
+            if(*next=='\\')
+            {
+                ++next;
+                *end_++=escape(*next++);
+                continue;
+            }
+
             *end_++=*next++;
         }
 
         ret=false;
+    }
+
+    char escape(char c) const
+    {
+        switch(c)
+        {
+            case 'n': return '\n';
+            case 't': return '\t';
+            default: return c;
+        }
     }
 
 private:
