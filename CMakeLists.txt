@@ -70,12 +70,12 @@ else(MSVC)
 endif()
 include_directories(SYSTEM
     ${BoostRoot}/include
-    ${CMAKE_SOURCE_DIR}/libs/png
-    ${CMAKE_SOURCE_DIR}/libs/zlib
-    ${CMAKE_SOURCE_DIR}/libs/jpeg
-    ${CMAKE_SOURCE_DIR}/libs/sqlite
-    ${CMAKE_SOURCE_DIR}/libs/webp/src
-    ${CMAKE_SOURCE_DIR}/libs/utf8
+    ${CMAKE_SOURCE_DIR}/core/png
+    ${CMAKE_SOURCE_DIR}/core/zlib
+    ${CMAKE_SOURCE_DIR}/core/jpeg
+    ${CMAKE_SOURCE_DIR}/core/sqlite
+    ${CMAKE_SOURCE_DIR}/core/webp/src
+    ${CMAKE_SOURCE_DIR}/core/utf8
     ${CMAKE_CONFIGURATION_HEADER_DIR}
 )
 include_directories(${CMAKE_SOURCE_DIR})
@@ -87,11 +87,11 @@ set(CMAKE_CXX_FLAGS_DEBUG     "${CMAKE_CXX_FLAGS_DEBUG}   ${CppWarningFlags} ${C
 set(CMAKE_CXX_FLAGS_RELEASE   "${CMAKE_CXX_FLAGS_RELEASE} ${CppWarningFlags} ${CppFlags} ${CppReleaseFlags}")
 set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}  ${ExeLinkFlags} ")
 
-add_subdirectory(libs/zlib)
-add_subdirectory(libs/png)
-add_subdirectory(libs/jpeg)
-add_subdirectory(libs/webp)
-add_subdirectory(libs/sqlite)
+add_subdirectory(core/zlib)
+add_subdirectory(core/png)
+add_subdirectory(core/jpeg)
+add_subdirectory(core/webp)
+add_subdirectory(core/sqlite)
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
