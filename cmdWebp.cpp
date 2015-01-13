@@ -40,12 +40,12 @@ class CmdCWebp:public CmdBaseT<CmdCWebp>
 
     struct Unit
     {
-        Unit(const bf::path& i, const bf::path& b, bool s)
+        Unit(const Path& i, const Path& b, bool s)
             :in(i), base(b), scaned(s)
         {}
 
-        bf::path in;
-        bf::path base;
+        Path in;
+        Path base;
         bool scaned;
     };
 
@@ -85,14 +85,14 @@ public:
             return MainReturn::eParamInvalid;
         }
 
-        const bf::path out=vm["output"].as<std::string>();
+        const Path out=vm["output"].as<std::string>();
         const auto outIsExist=bf::exists(out);
         const auto outIsDir=bf::is_directory(out);
 
         //单个文件，处理情况特殊
         if(units_.size()==1 && !outIsExist)
         {
-            callCWebpMain(units_[0].in, bf::path(out));
+            callCWebpMain(units_[0].in, Path(out));
             return MainReturn::eGood;
         }
 
@@ -120,9 +120,9 @@ private:
     void inputCollect()
     {
         const auto& vm=mapGet();
-        for(const auto& in: vm["input"].as<std::vector<std::string>>())
+        for(const Path in: vm["input"].as<std::vector<std::string>>())
         {
-            if(!bf::exists(in))
+            if(!bf::exists(in.path()))
             {
                 stdErr() << in << ": not exist" << std::endl;
                 continue;
@@ -130,11 +130,11 @@ private:
 
             if(canCWepb(in))
             {
-                units_.emplace_back(bf::path(in), bf::path(), false); 
+                units_.emplace_back(Path(in), Path(), false); 
                 continue;
             }
 
-            bf::directory_iterator ditr(in);
+            bf::directory_iterator ditr(in.path());
             bf::directory_iterator const end;
             for(; ditr!=end; ++ditr)
             {
@@ -145,7 +145,7 @@ private:
         }
     }
 
-    void callCWebpMain(const bf::path& in, bf::path&& out) const
+    void callCWebpMain(const Path& in, Path&& out) const
     {
         out.replace_extension("webp");
         const auto& pp=out.parent_path();
@@ -189,10 +189,10 @@ private:
         pool.post(task);
     }
 
-    bool canCWepb(const bf::path& path) const
+    bool canCWepb(const Path& path) const
     {
-        return bf::is_regular_file(path)
-            && boost::algorithm::iends_with(path.string(), ".png");
+        return bf::is_regular_file(path.path())
+			&& boost::algorithm::iends_with(WCharConverter::to(path.native()), ".png");
     }
 
 private:

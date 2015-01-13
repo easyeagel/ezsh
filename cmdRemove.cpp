@@ -22,8 +22,6 @@
 namespace ezsh
 {
 
-namespace bf=boost::filesystem;
-
 class CmdRemove:public CmdBaseT<CmdRemove, FileSetCmdBase<>>
 {
     typedef CmdBaseT<CmdRemove, FileSetCmdBase> BaseThis;
