@@ -179,6 +179,8 @@ private:
         {
             Path path=simpleReplace(param.value);
             bf::ifstream strm(path.path());
+            if(!strm)
+                continue;
             fileOne(strm, out);
         }
     }

@@ -167,6 +167,12 @@ public:
         vars_[name]=val;
     }
 
+    template<typename Val>
+    void set(const std::string& name, const Val& val)
+    {
+        vars_[name]=VarSPtr(new Variable(val));
+    }
+
     VarSPtr get(const std::string& name) const;
     std::string stringGet(const std::string& name) const;
     std::string stringGet(const std::string& name, const std::string& def) const;

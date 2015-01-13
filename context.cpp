@@ -182,7 +182,7 @@ VarSPtr Context::get(const std::string& name) const
     while(ctx)
     {
         auto const itr=ctx->vars_.find(name);
-        if(itr==vars_.end())
+        if(itr==ctx->vars_.end())
         {
             ctx=ctx->frontGet();
             continue;

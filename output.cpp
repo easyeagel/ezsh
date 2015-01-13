@@ -58,7 +58,12 @@ void OutPut::init(const bp::variables_map& vm)
 
     itr=vm.find("outExtAdd");
     if(itr!=vm.end())
-        outDir_="."+itr->second.as<std::string>();
+    {
+        const auto t=itr->second.as<std::string>();
+        if(t.empty() || t.front()!='.')
+            extAdd_ += '.';
+        extAdd_ += t;
+    }
 
     itr=vm.find("outFile");
     if(itr!=vm.end())

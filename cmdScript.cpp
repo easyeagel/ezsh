@@ -19,6 +19,7 @@
 #include<cctype>
 #include<boost/filesystem/fstream.hpp>
 
+#include"parser.hpp"
 #include"script.hpp"
 #include"option.hpp"
 #include"filesystem.hpp"
@@ -35,6 +36,7 @@ public:
     {
         opt_.add_options()
             ("file,f", bp::value<std::vector<std::string>>()->required(), "files to run")
+            ("set",    bp::value<std::vector<std::string>>()->multitoken(), "set var with value")
         ;
         optPos_.add("file", -1);
     }
@@ -46,7 +48,7 @@ public:
 
     MainReturn doit() override
     {
-        namespace bf=boost::filesystem;
+        varSet();
 
         const auto& vm=mapGet();
         const auto& files=vm["file"].as<std::vector<std::string>>();
@@ -92,7 +94,23 @@ public:
         return MainReturn::eGood;
     }
 
-public:
+private:
+    void varSet()
+    {
+        const auto& vm=mapGet();
+        const auto itr=vm.find("set");
+        if(itr==vm.end())
+            return;
+
+        const auto& sets=itr->second.as<std::vector<std::string>>();
+        for(const auto& s: sets)
+        {
+            auto const p=simpleSplit(s, '=');
+            contextGet()->set(p.first, p.second);
+        }
+    }
+
+private:
     std::list<Script> scripts_;
 };
 
