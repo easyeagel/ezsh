@@ -24,7 +24,7 @@
 
 #include"encode.hpp"
 #include"option.hpp"
-#include"filesystem.hpp"
+#include"fileset.hpp"
 
 namespace ezsh
 {
@@ -51,6 +51,11 @@ public:
         sqlite_.reset(new SQLite::Database(db, SQLITE_OPEN_CREATE|SQLITE_OPEN_READWRITE));
     }
 
+    void noBaseSet(bool v=true)
+    {
+        noBase_=v;
+    }
+
     void save()
     {
         SQLite::Transaction tran(*sqlite_);
@@ -58,14 +63,19 @@ public:
         sqliteReset();
         for(const auto& dir: dirs_)
         {
-            eleSave(true, dir);
+            if(noBase_==false)
+                eleSave(true, dir, Path());
 
-            DirRItr itr(pathCreate(dir));
+            const auto path=pathCreate(dir);
+            if(!bf::exists(path))
+                continue;
+
+            DirRItr itr(path);
             DirRItr const end;
             for(; itr!=end; ++itr)
             {
                 const auto& status=itr->status();
-                eleSave(status.type()==boost::filesystem::directory_file, itr->path());
+                eleSave(status.type()==boost::filesystem::directory_file, itr->path(), path);
             }
         }
 
@@ -89,10 +99,10 @@ private:
         query_.reset(new SQLite::Statement(*sqlite_, sql));
     }
 
-    void eleSave(bool dir, const Path& path)
+    void eleSave(bool dir, const Path& path, const Path& base)
     {
         //目录统一使用UTF8保存
-        const auto& str=WCharConverter::to(path.string());
+        const auto& str=WCharConverter::to(noBase_==false ? path.string() : FileUnit::sub(path, base).string());
         query_->bind(1, static_cast<const void*>(str.c_str()), str.size());
 
         if(dir)
@@ -126,6 +136,7 @@ private:
     }
 
 private:
+    bool noBase_=false;
     std::string table_;
     std::vector<std::string> dirs_;
     std::shared_ptr<SQLite::Database> sqlite_;
@@ -140,8 +151,9 @@ public:
         :BaseThis("sqliteImport - import file or dir to sqlite database")
     {
         opt_.add_options()
-            ("table",  bp::value<std::string>(), "table name of sqlite database")
+            ("noBase", "no base")
             ("db",     bp::value<std::string>()->required(), "sqlite database")
+            ("table",  bp::value<std::string>(), "table name of sqlite database")
             ("file,f", bp::value<std::vector<std::string>>()->required(), "file or dir to import")
         ;
         optPos_.add("file", -1);
@@ -160,6 +172,7 @@ public:
         const auto& files=vm["file"].as<std::vector<std::string>>();
 
         SqlitePacket sp;
+        sp.noBaseSet(vm.count("noBase")>0);
         if(0==vm.count("table"))
             sp.init(db, files);
         else
