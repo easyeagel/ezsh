@@ -77,13 +77,14 @@ void CmdBase::help(std::ostream& strm)
         c->shortHelp(strm);
 }
 
-void CmdBase::parse(int ac, char* av[])
+void CmdBase::parse(StrCommandLine&& cl)
 {
     bp::options_description optComponents;
     for(auto& c: components_)
         c->options(optComponents, optPos_);
 
-    bp::command_line_parser parser(ac, av);
+    const auto cmd=cmdlineMake(cl);
+    bp::command_line_parser parser(cmd.size(), cmd.data());
     if(optComponents.options().empty())
     {
         parser.options(opt_);
@@ -101,16 +102,6 @@ void CmdBase::parse(int ac, char* av[])
     for(auto& call: afterParseCalls_)
         call(vm_);
 }
-
-MainReturn CmdBase::init(const ContextSPtr& context)
-{
-    context_=context;
-    return MainReturn::eGood;
-}
-
-CmdBase::~CmdBase()
-{}
-
 
 
 
@@ -213,7 +204,7 @@ public:
         return "help";
     }
 
-    MainReturn doit() override
+    MainReturn doit()
     {
         std::cerr <<
             "ezsh command [options]\n\n";
@@ -248,7 +239,7 @@ public:
         return "option";
     }
 
-    MainReturn doit() override
+    MainReturn doit()
     {
         std::cerr << "valid options list: " << std::endl;
         const auto& opts=OptionDict::dictGet();

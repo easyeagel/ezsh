@@ -45,7 +45,8 @@ int myMain(int argc, char* argv[])
     const auto& cmd=trait->create();
     try
     {
-        cmd->parse(argc-1, argv+1);
+        argc -= 1, argv += 1;
+        cmd->parse(StrCommandLine(argv, argv+argc));
     } catch (const boost::program_options::error& ec) {
         std::cerr << ec.what() << std::endl;
         return static_cast<int>(MainReturn::eParamInvalid);
@@ -53,7 +54,7 @@ int myMain(int argc, char* argv[])
 
     auto ret=cmd->init(cs.top());
     if(ret.good())
-        ret=cmd->doit();
+        ret=cmd->taskDoit();
 
     TaskPool::stop();
     return ret.get<int>();

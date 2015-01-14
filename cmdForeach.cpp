@@ -22,12 +22,12 @@
 namespace ezsh
 {
 
-class GroupBeginForeach: public GroupPointBase
+class GroupHeadForeach: public GroupPointBaseT<GroupHeadForeach>
 {
     class Visitor: public boost::static_visitor<>
     {
     public:
-        Visitor(GroupBeginForeach& sc)
+        Visitor(GroupHeadForeach& sc)
             :sc_(sc)
         {}
 
@@ -43,13 +43,14 @@ class GroupBeginForeach: public GroupPointBase
         }
 
     private:
-        GroupBeginForeach& sc_;
+        GroupHeadForeach& sc_;
     };
 
     friend class Visitor;
+    typedef GroupPointBaseT<GroupHeadForeach> BaseThis;
 public:
-    GroupBeginForeach(const ScriptCommand& sc)
-        :GroupPointBase(sc, "foreach - foreach group begin")
+    GroupHeadForeach()
+        :BaseThis("foreach - foreach group begin")
     {
         opt_.add_options()
             ("loop", bp::value<std::string>()->required(), "loop var name")
@@ -109,42 +110,38 @@ private:
     std::deque<const VarList*> listPtr_;
 };
 
-class CmdForeach:public CommandGroup<CmdForeach>
+class GroupTailForeach: public GroupPointBaseT<GroupTailForeach>
 {
-    typedef CommandGroup<CmdForeach> BaseThis;
+    typedef GroupPointBaseT<GroupTailForeach> BaseThis;
 public:
-    CmdForeach(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
-        : BaseThis(s)
-        , begin_(b)
-        , end_(e, "endforeach - foreach group end")
+    GroupTailForeach()
+        :BaseThis("endforeach - foreach group end")
     {}
 
-    static const char* beginGet()
+    MainReturn doit()
+    {
+        return MainReturn::eGood;
+    }
+
+};
+
+class CmdForeach:public CommandGroupT<CmdForeach, GroupHeadForeach, GroupTailForeach>
+{
+    typedef CommandGroupT<CmdForeach, GroupHeadForeach, GroupTailForeach> BaseThis;
+public:
+    CmdForeach(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
+        : BaseThis(b, s, e)
+    {}
+
+    static const char* headGet()
     {
         return "foreach";
     }
 
-    static const char* endGet()
+    static const char* tailGet()
     {
         return "endforeach";
     }
-
-    typedef GroupPointBase GroupEnd;
-    typedef GroupBeginForeach GroupBegin;
-
-    GroupBegin& groupBeginGet()
-    {
-        return begin_;
-    }
-
-    GroupEnd& groupEndGet()
-    {
-        return end_;
-    }
-
-private:
-    GroupBegin begin_;
-    GroupEnd   end_;
 };
 
 namespace

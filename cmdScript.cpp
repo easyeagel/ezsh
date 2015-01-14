@@ -46,7 +46,7 @@ public:
         return "script";
     }
 
-    MainReturn doit() override
+    MainReturn doit()
     {
         varSet();
 

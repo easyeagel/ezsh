@@ -39,7 +39,7 @@ public:
         return "remove";
     }
 
-    MainReturn doit() override
+    MainReturn doit()
     {
         auto& files=fileGet();
         const auto& vm=mapGet();

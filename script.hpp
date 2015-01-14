@@ -42,7 +42,7 @@ public:
             return false;
 
         start_=next;
-        end_=next;
+        tail_=next;
         while(next!=end)
         {
             switch(*next)
@@ -55,10 +55,10 @@ public:
                 case ' ':
                 case '\t':
                 {
-                    out(start_, end_);
+                    out(start_, tail_);
                     skipBlank(next, end);
                     start_=next;
-                    end_=next;
+                    tail_=next;
                     break;
                 }
                 case '\\':
@@ -66,16 +66,16 @@ public:
                     ++next;
                     if(next==end)
                         return false;
-                    *end_++=escape(*next++);
+                    *tail_++=escape(*next++);
                     continue;
                 }
                 default:
                 {
-                    if(end_!=next)
+                    if(tail_!=next)
                     {
-                        *end_++=*next++;
+                        *tail_++=*next++;
                     } else {
-                        ++end_;
+                        ++tail_;
                         ++next;
                     }
                     break;
@@ -86,15 +86,15 @@ public:
         if(ret==false)
             return false;
 
-        if(start_!=end_)
-            out(start_, end_);
+        if(start_!=tail_)
+            out(start_, tail_);
         return true;
     }
 
     void reset()
     {
         start_=Itr();
-        end_=start_;
+        tail_=start_;
         ret=true;
     }
 
@@ -119,11 +119,11 @@ private:
             if(*next=='\\')
             {
                 ++next;
-                *end_++=escape(*next++);
+                *tail_++=escape(*next++);
                 continue;
             }
 
-            *end_++=*next++;
+            *tail_++=*next++;
         }
 
         ret=false;
@@ -141,14 +141,13 @@ private:
 
 private:
     Itr start_;
-    Itr end_;
+    Itr tail_;
     bool ret=true;
 };
 
 class Script;
 class ScriptCommand;
-class CommandGroupBase;
-typedef std::function<std::unique_ptr<CommandGroupBase>(const ScriptCommand&, const Script&, const ScriptCommand& )> CommandGroupCreate;
+typedef std::function<std::unique_ptr<TaskBase>(const ScriptCommand&, const Script&, const ScriptCommand& )> CommandGroupCreate;
 
 struct CommandGroupTrait
 {
@@ -202,6 +201,8 @@ public:
 		trait_.reset();
 		args_.clear();
 	}
+
+    MainReturn init(const ContextSPtr& context, CmdBase& cmd) const;
 
     MainReturn execute(const ContextSPtr& context) const;
     MainReturn execute(const ContextSPtr& context, CmdBase& cmd) const;
@@ -262,30 +263,8 @@ private:
     Container script_;
 };
 
-//CommandGroup 主要作为 命令组 基类使用
-class CommandGroupBase
-{
-public:
-    CommandGroupBase(const Script& s)
-        :script_(s)
-    {}
-
-    virtual MainReturn execute(const ContextSPtr& context) = 0;
-
-    virtual ~CommandGroupBase()
-    {}
-
-    const Script& scriptGet() const
-    {
-        return script_;
-    }
-
-private:
-    const Script& script_;
-};
-
-template<typename Obj, typename Base=CommandGroupBase>
-class CommandGroup: public Base
+template<typename Obj, typename Head, typename Tail, typename Base=TaskBase>
+class CommandGroupT: public Base
 {
     Obj& objGet()
     {
@@ -296,42 +275,64 @@ class CommandGroup: public Base
     {
         return static_cast<Obj&>(*this);
     }
+
+    typedef Base BaseThis;
 public:
-    CommandGroup(const Script& s)
-        :Base(s)
+    CommandGroupT(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
+        :scHead_(b), script_(s), scTail_(e)
     {}
 
-    MainReturn execute(const ContextSPtr& context)
+    MainReturn taskDoit()
     {
-        auto& b=objGet().groupBeginGet();
-        b.oldContextSet(context);
-        auto& e=objGet().groupEndGet();
-        e.oldContextSet(context);
+        head_.oldContextSet(this->contextGet());
 
-        auto ctx=context->alloc();
+        tail_.oldContextSet(this->contextGet());
+
+        auto ctx=this->contextGet()->alloc();
+
+        auto ret=scHead_.init(ctx, head_);
+        if(ret.bad())
+            return ret;
+
+        ret=scTail_.init(ctx, tail_);
+        if(ret.bad())
+            return ret;
 
         for(;;)
         {
-            auto ret=b.execute(ctx);
+            auto ret=head_.taskDoit();
             if(ret.bad())
                 return ret;
 
             if(ret.get()==MainReturn::eGroupDone)
                 break;
 
-            ret=this->scriptGet().execute(ctx);
+            ret=scriptGet().execute(ctx);
             if(ret.bad())
                 return ret;
         }
 
-        return e.execute(ctx);
+        return tail_.taskDoit();
     }
 
-    static std::unique_ptr<CommandGroupBase> create(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
+    static std::unique_ptr<TaskBase> create(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
     {
-        return std::unique_ptr<CommandGroupBase>(new Obj(b, s, e));
+        return std::unique_ptr<TaskBase>(new Obj(b, s, e));
     }
 
+    const Script& scriptGet() const
+    {
+        return script_;
+    }
+
+private:
+    const ScriptCommand& scHead_;
+    const Script& script_;
+    const ScriptCommand& scTail_;
+
+protected:
+    Head head_;
+    Tail tail_;
 };
 
 class CommandGroupDict
@@ -370,26 +371,18 @@ struct CommandGroupRegister
     CommandGroupRegister()
     {
         auto& d=const_cast<CommandGroupDict&>(CommandGroupDict::instance());
-        d.insert(G::beginGet(), G::endGet(), &G::create);
+        d.insert(G::headGet(), G::tailGet(), &G::create);
     }
 };
 
-class GroupPointBase: public CmdBase
+template<typename Obj>
+class GroupPointBaseT: public CmdBaseT<Obj>
 {
+    typedef CmdBaseT<Obj> BaseThis;
 public:
-    GroupPointBase(const ScriptCommand& sc, const char* msg)
-        :CmdBase(msg), sc_(sc)
+    GroupPointBaseT(const char* msg)
+        :BaseThis(msg)
     {}
-
-    MainReturn execute(const ContextSPtr& ctx)
-    {
-        return sc_.execute(ctx, *this);
-    }
-
-    MainReturn doit() override
-    {
-        return MainReturn::eGood;
-    }
 
     void oldContextSet(const ContextSPtr& old)
     {
@@ -403,11 +396,8 @@ public:
 
 private:
     ContextSPtr oldCtx_;
-    const ScriptCommand& sc_;
 };
 
 
 }  //namespace ezsh
-
-
 

@@ -43,7 +43,7 @@ public:
         return "list";
     }
 
-    MainReturn doit() override
+    MainReturn doit()
     {
         auto& files=fileGet();
         const auto& vm=mapGet();

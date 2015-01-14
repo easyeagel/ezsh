@@ -152,7 +152,7 @@ public:
         return "sqliteImport";
     }
 
-    MainReturn doit() override
+    MainReturn doit()
     {
         const auto& vm=mapGet();
 

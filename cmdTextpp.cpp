@@ -45,7 +45,7 @@ public:
         return "textpp";
     }
 
-    MainReturn doit() override
+    MainReturn doit()
     {
         const auto& vm=mapGet();
 

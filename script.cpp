@@ -52,28 +52,25 @@ MainReturn ScriptCommand::execute(const ContextSPtr& context) const
 
 MainReturn ScriptCommand::execute(const ContextSPtr& context, CmdBase& cmd) const
 {
-    CommandLine args;
-    StrCommandLine strArgs;
-    context->cmdlineReplace(cmdlineGet(), strArgs);
-    std::for_each(strArgs.begin(), strArgs.end(),
-        [&args](const std::string& s)
-        {
-            args.push_back(const_cast<char*>(s.data()));
-        }
-    );
+    auto ret=init(context, cmd);
+    if(ret.good())
+        ret=cmd.taskDoit();
+    return ret;
+}
 
+MainReturn ScriptCommand::init(const ContextSPtr& context, CmdBase& cmd) const
+{
+    StrCommandLine args;
+    context->cmdlineReplace(cmdlineGet(), args);
     try
     {
-        cmd.parse(args.size(), const_cast<char**>(args.data()));
+        cmd.parse(std::move(args));
     } catch (const boost::program_options::error& ec) {
         std::cerr << ec.what() << std::endl;
         return MainReturn::eParamInvalid;
     }
 
-    auto ret=cmd.init(context);
-    if(ret.good())
-        ret=cmd.doit();
-    return ret;
+    return cmd.init(context);
 }
 
 GroupCommand::GroupCommand(ScriptCommand&& h, ScriptCommand&& t, Script&& b, const CommandGroupTraitSPtr& tt)
@@ -85,7 +82,10 @@ GroupCommand::GroupCommand(ScriptCommand&& h, ScriptCommand&& t, Script&& b, con
 MainReturn GroupCommand::execute(const ContextSPtr& context) const
 {
     auto const ptr=trait_->create(head_, *body_, tail_);
-    return ptr->execute(context);
+    auto ret=ptr->init(context);
+    if(ret.bad())
+        return ret;
+    return ptr->taskDoit();
 }
 
 class ScriptLoad

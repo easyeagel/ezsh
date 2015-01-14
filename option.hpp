@@ -114,38 +114,20 @@ public:
 
 typedef std::shared_ptr<OptionComponent> OptionComponentSPtr;
 
-class CmdBase
+class TaskBase
 {
-protected:
-    CmdBase(const char* msg)
-        :opt_(msg)
-    {}
-
 public:
-    typedef bp::variables_map VarMap;
-    typedef std::function<void (const VarMap&)> AfterParseCall;
-
-    virtual void help(std::ostream& strm=std::cerr);
-    virtual void parse(int ac, char* av[]);
-    virtual MainReturn init(const ContextSPtr& context);
-    virtual ~CmdBase();
-
-    virtual MainReturn doit() = 0;
-
-    const VarMap& mapGet() const
-    {
-        return vm_;
-    }
-
-    template<typename Call>
-    void afterParseCall(Call&& call)
-    {
-        afterParseCalls_.emplace_back(std::move(call));
-    }
+    virtual MainReturn taskDoit() = 0;
 
     const ContextSPtr& contextGet() const
     {
         return context_;
+    }
+
+    virtual MainReturn init(const ContextSPtr& context)
+    {
+        context_=context;
+        return MainReturn::eGood;
     }
 
     StdOutStream& stdOut() const
@@ -156,6 +138,39 @@ public:
     StdErrStream& stdErr() const
     {
         return contextGet()->stdErr();
+    }
+
+    virtual ~TaskBase()=default;
+
+protected:
+    ContextSPtr context_;
+};
+
+class CmdBase: public TaskBase
+{
+protected:
+    CmdBase(const char* msg)
+        :opt_(msg)
+    {}
+
+    CmdBase()=default;
+
+public:
+    typedef bp::variables_map VarMap;
+    typedef std::function<void (const VarMap&)> AfterParseCall;
+
+    virtual void help(std::ostream& strm=std::cerr);
+    virtual void parse(StrCommandLine&& cl);
+
+    const VarMap& mapGet() const
+    {
+        return vm_;
+    }
+
+    template<typename Call>
+    void afterParseCall(Call&& call)
+    {
+        afterParseCalls_.emplace_back(std::move(call));
     }
 
     void componentPush(const OptionComponentSPtr& com)
@@ -169,8 +184,6 @@ private:
     std::list<AfterParseCall> afterParseCalls_;
 
 protected:
-    ContextSPtr context_;
-
     bp::options_description opt_;
     bp::positional_options_description optPos_;
     std::vector<OptionComponentSPtr> components_;
@@ -179,9 +192,23 @@ protected:
 template<typename Obj, typename Base=CmdBase>
 class CmdBaseT: public Base
 {
+    Obj& objGet()
+    {
+        return static_cast<Obj&>(*this);
+    }
+
+    const Obj& objGet() const
+    {
+        return static_cast<Obj&>(*this);
+    }
 public:
     CmdBaseT(const char* msg)
         :Base(msg)
+    {}
+
+    template<typename... Args>
+    CmdBaseT(Args&&... args)
+        :Base(std::forward<Args&&>(args)...)
     {}
 
     static std::unique_ptr<CmdBase> create()
@@ -192,6 +219,11 @@ public:
     static const char* moduleGet()
     {
         return "core";
+    }
+
+    MainReturn taskDoit()
+    {
+        return objGet().doit();
     }
 
 };

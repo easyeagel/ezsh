@@ -52,7 +52,7 @@ public:
         return "unicode";
     }
 
-    MainReturn doit() override
+    MainReturn doit()
     {
         const auto& vm=mapGet();
         auto& files=fileGet();

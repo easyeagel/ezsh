@@ -70,7 +70,7 @@ public:
         return "cwebp";
     }
 
-    MainReturn doit() override
+    MainReturn doit()
     {
         const auto& vm=mapGet();
 

@@ -35,7 +35,7 @@ namespace ezsh
 class CmdStart: public CmdBaseT<CmdStart>
 {
     typedef CmdBaseT<CmdStart> BaseThis;
-    typedef std::vector<char*> CmdLine;
+    typedef StrCommandLine CmdLine;
 public:
     CmdStart()
         :BaseThis("start - start a program")
@@ -52,16 +52,22 @@ public:
         ;
     }
 
-    void parse(int ac, char* av[]) override
+    void parse(StrCommandLine&& cl) override
     {
-        char** const avEnd=av+ac;
+        auto av=cl.begin();
+        auto const avEnd=cl.end();
         for(;;)
         {
-            auto itr=std::find(av, avEnd, std::string("--"));
-            cmdLines_.emplace_back(av, itr);
+            auto itr=std::find(av, avEnd, "--");
+            StrCommandLine tmp(std::distance(av, itr));
+            if(tmp.empty())
+                throw bp::error("cmdline error for start");
+
+            std::move(av, itr, tmp.begin());
+            cmdLines_.emplace_back(std::move(tmp));
             if(itr==avEnd)
                 break;
-            *itr=nullptr;
+
             av=itr+1;
             if(av==avEnd)
                 throw bp::error("no exec to start");
@@ -71,7 +77,7 @@ public:
             throw bp::error("no exec to start");
 
         auto& self=cmdLines_[0];
-        return BaseThis::parse(self.size(), self.data());
+        return BaseThis::parse(std::move(self));
     }
 
     static const char* nameGet()
@@ -208,7 +214,7 @@ private:
 		info.dwFlags |= STARTF_USESTDHANDLES;
     }
 
-    int start(const Path& exe, CmdLine& cl)
+    int start(const Path& exe, const CmdLine& cl)
     {
 		Path path(exe);
 		path.make_preferred();
@@ -272,10 +278,10 @@ private:
         ::dup2(fd, STDOUT_FILENO);
     }
 
-    int start(const Path& exe, CmdLine& cmd)
+    int start(const Path& exe, const CmdLine& cl)
     {
+        auto cmd=cmdlineMake(cl);
         cmd.push_back(nullptr);
-
         const auto pid=::fork();
         switch(pid)
         {
