@@ -35,6 +35,7 @@ public:
         :BaseThis("script - run file as ezsh script")
     {
         opt_.add_options()
+            ("dry", "dry run for debug")
             ("file,f", bp::value<std::vector<std::string>>()->required(), "files to run")
             ("set",    bp::value<std::vector<std::string>>()->multitoken(), "set var with value")
         ;
@@ -51,6 +52,9 @@ public:
         varSet();
 
         const auto& vm=mapGet();
+        if(vm.count("dry")>0)
+            CmdBase::setDry();
+
         const auto& files=vm["file"].as<std::vector<std::string>>();
 
         bool isExist=true;

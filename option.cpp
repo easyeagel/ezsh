@@ -69,6 +69,7 @@ void TaskPool::stop()
 bool TaskPool::stared_=false;
 
 
+bool CmdBase::dry_=false;
 
 void CmdBase::help(std::ostream& strm)
 {

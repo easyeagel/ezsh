@@ -178,6 +178,11 @@ public:
         components_.push_back(com);
     }
 
+    static void setDry(bool v=true)
+    {
+        dry_=v;
+    }
+
 private:
     VarMap vm_;
     bp::options_description optAll_;
@@ -187,6 +192,9 @@ protected:
     bp::options_description opt_;
     bp::positional_options_description optPos_;
     std::vector<OptionComponentSPtr> components_;
+
+protected:
+    static bool dry_;
 };
 
 template<typename Obj, typename Base=CmdBase>
@@ -223,9 +231,44 @@ public:
 
     MainReturn taskDoit()
     {
-        return objGet().doit();
+        if(Base::dry_==false)
+            return objGet().doit();
+
+        //简单打印，不执行操作
+        return objGet().doDry();
     }
 
+    MainReturn doDry()
+    {
+        this->stdOut() << objGet().nameGet() << '\n';
+        const auto& vm=this->mapGet();
+        for(const auto& v: vm)
+        {
+            this->stdOut() << '\t' << v.first << ": ";
+
+            const auto& any=v.second.value();
+            const auto str=boost::any_cast<std::string>(&any);
+            if(str!=nullptr)
+            {
+                this->stdOut() << *str << std::endl;
+                continue;
+            }
+
+            const auto list=boost::any_cast<std::vector<std::string>>(&any);
+            if(list!=nullptr)
+            {
+                const auto& l=*list;
+                const auto size=l.size()-1;
+
+                this->stdOut() << "{";
+                for(size_t i=0; i<size; ++i)
+                    this->stdOut() << l[i] << ", ";
+                this->stdOut() << l[size] << "}" << std::endl;
+            }
+        }
+
+        return MainReturn::eGood;
+    }
 };
 
 class OptionOneAndOnly

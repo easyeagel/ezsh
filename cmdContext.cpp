@@ -47,7 +47,6 @@ public:
     MainReturn doit()
     {
         const auto& vm=mapGet();
-
         auto itr=vm.find("set");
         if(itr!=vm.end())
             setDo(itr->second.as<std::vector<std::string>>());
@@ -56,6 +55,17 @@ public:
         if(itr!=vm.end())
             echoDo(itr->second.as<std::vector<std::string>>());
 
+        return MainReturn::eGood;
+    }
+
+    MainReturn doDry()
+    {
+        BaseThis::doDry();
+
+        const auto& vm=mapGet();
+        auto itr=vm.find("set");
+        if(itr!=vm.end())
+            setDo(itr->second.as<std::vector<std::string>>());
         return MainReturn::eGood;
     }
 

@@ -325,6 +325,16 @@ public:
         return script_;
     }
 
+    static const char* headGet()
+    {
+        return Head::nameGet();
+    }
+
+    static const char* tailGet()
+    {
+        return Tail::nameGet();
+    }
+
 private:
     const ScriptCommand& scHead_;
     const Script& script_;

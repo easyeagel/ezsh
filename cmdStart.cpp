@@ -114,6 +114,22 @@ public:
         return MainReturn::eGood;
     }
 
+    MainReturn doDry()
+    {
+        BaseThis::doDry();
+        const size_t count=cmdLines_.size();
+        for(size_t i=1; i<count; ++i)
+        {
+            auto& cmd=cmdLines_[i];
+            stdOut() << "\t--";
+            for(const auto& c: cmd)
+                stdOut() << " " << c;
+            stdOut() << std::endl;
+        }
+
+        return MainReturn::eGood;
+    }
+
 private:
     bool check()
     {
@@ -192,7 +208,7 @@ private:
     }
 
 #ifdef WIN32
-    void stdOut(::STARTUPINFOW& info)
+    void stdOutReset(::STARTUPINFOW& info)
     {
         if(stdOut_.empty())
             return;
@@ -237,7 +253,7 @@ private:
 		si.cb = sizeof(si);
 		std::memset(&pi, 0, sizeof(pi) );
 
-        stdOut(si);
+        stdOutReset(si);
 
 		if (!::CreateProcessW(nullptr,
 			const_cast<wchar_t*>(cmd.data()),        // Command line
@@ -270,7 +286,7 @@ private:
 		return 0;
     }
 #else
-    void stdOut()
+    void stdOutReset()
     {
         if(stdOut_.empty())
             return;
@@ -287,7 +303,7 @@ private:
         {
             case 0://child
             {
-                stdOut();
+                stdOutReset();
                 ::execv(exe.c_str(), cmd.data());
                 ::perror("execv");
                 ::exit(EXIT_FAILURE);

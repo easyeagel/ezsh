@@ -100,6 +100,17 @@ public:
         return MainReturn::eGood;
     }
 
+    MainReturn doDry()
+    {
+        BaseThis::doDry();
+        return doit();
+    }
+
+    static const char* nameGet()
+    {
+        return "foreach";
+    }
+
 private:
     bool done_=false;
     bool first_=true;
@@ -123,6 +134,11 @@ public:
         return MainReturn::eGood;
     }
 
+    static const char* nameGet()
+    {
+        return "endforeach";
+    }
+
 };
 
 class CmdForeach:public CommandGroupT<CmdForeach, GroupHeadForeach, GroupTailForeach>
@@ -132,16 +148,6 @@ public:
     CmdForeach(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
         : BaseThis(b, s, e)
     {}
-
-    static const char* headGet()
-    {
-        return "foreach";
-    }
-
-    static const char* tailGet()
-    {
-        return "endforeach";
-    }
 };
 
 namespace
