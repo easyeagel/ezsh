@@ -1,11 +1,17 @@
+{{{
+
 ezsh command [options]
 
 context - contrl current context:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
   --set arg             set context var
   --echo arg            echo this params
 
 
 cwebp - webp encode:
+  --error arg (=2)                error attitude:
+                                  0: ignore, 1: quiet, 2: report, 3: break
   -c [ --concurrency ]            concurrency encode with threads
   -i [ --input ] arg              file or dir to encode
   -o [ --output ] arg             file or dir for output
@@ -14,40 +20,52 @@ cwebp - webp encode:
 
 
 help - show help message:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
   --long                show long help
   --cmd arg             show only this command
 
 
 list - list file or dir:
-  --noError             do not report error
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
 
   fileset - rules for file select, "option fileset" for details
 
 
 
 mkdir - make dir:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
   -p [ --parents ]      no error if existing, make parent directories as needed
   -d [ --dir ] arg      dirs to make
 
 
 option - show option message:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
   --option arg          show only option
 
 
 remove - remove file or dir:
-  -f [ --force ]        ignore nonexistent files and arguments
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
 
   fileset - rules for file select, "option fileset" for details
 
 
 
 script - run file as ezsh script:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
   --dry                 dry run for debug
   -f [ --file ] arg     files to run
   --set arg             set var with value
 
 
 sqliteImport - import file or dir to sqlite database:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
   --noBase              no base
   --db arg              sqlite database
   --table arg           table name of sqlite database
@@ -55,6 +73,8 @@ sqliteImport - import file or dir to sqlite database:
 
 
 start - start a program:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
   --exist arg           start exec, if this exist
   --existNot arg        start exec, if this not exist
   --fileExist arg       start exec, if this file exist
@@ -65,6 +85,8 @@ start - start a program:
 
 
 textpp - textpp file or dir:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
   -f [ --force ]        ignore nonexistent files and arguments
   -D [ --define ] arg   define a macro
 
@@ -76,6 +98,8 @@ textpp - textpp file or dir:
 
 
 unicode - unicode file or dir:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
   --bomAdd              add BOM in file header
   --bomRemove           remove BOM in file header
   --valid               check files utf8 encode
@@ -84,3 +108,4 @@ unicode - unicode file or dir:
 
 
 
+}}}
