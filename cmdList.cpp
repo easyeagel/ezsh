@@ -43,7 +43,7 @@ public:
         return "list";
     }
 
-    MainReturn doit()
+    void doit()
     {
         auto& files=fileGet();
         const auto& vm=mapGet();
@@ -66,8 +66,6 @@ public:
                 filePrint(u);
             }
         );
-
-        return MainReturn::eGood;
     }
 
 private:

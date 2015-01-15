@@ -49,15 +49,15 @@ int myMain(int argc, char* argv[])
         cmd->parse(StrCommandLine(argv, argv+argc));
     } catch (const boost::program_options::error& ec) {
         std::cerr << ec.what() << std::endl;
-        return static_cast<int>(MainReturn::eParamInvalid);
+        return static_cast<int>(EzshError::eParamInvalid);
     }
 
-    auto ret=cmd->init(cs.top());
-    if(ret.good())
-        ret=cmd->taskDoit();
+    cmd->init(cs.top());
+    if(cmd->good())
+        cmd->taskDoit();
 
     TaskPool::stop();
-    return ret.get<int>();
+    return cmd->ecGet().value();
 }
 
 }

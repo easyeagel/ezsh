@@ -44,33 +44,36 @@ bool ScriptCommand::tokenize()
     }
 }
 
-MainReturn ScriptCommand::execute(const ContextSPtr& context) const
+void ScriptCommand::execute(ErrorCode& ec, const ContextSPtr& context) const
 {
     const auto& cmd=traitGet()->create();
-    return execute(context, *cmd);
+    return execute(ec, context, *cmd);
 }
 
-MainReturn ScriptCommand::execute(const ContextSPtr& context, CmdBase& cmd) const
+void ScriptCommand::execute(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const
 {
-    auto ret=init(context, cmd);
-    if(ret.good())
-        ret=cmd.taskDoit();
-    return ret;
+    init(ec, context, cmd);
+    if(ec.bad())
+        return;
+    cmd.taskDoit();
 }
 
-MainReturn ScriptCommand::init(const ContextSPtr& context, CmdBase& cmd) const
+void ScriptCommand::init(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const
 {
     StrCommandLine args;
     context->cmdlineReplace(cmdlineGet(), args);
     try
     {
         cmd.parse(std::move(args));
-    } catch (const boost::program_options::error& ec) {
-        std::cerr << ec.what() << std::endl;
-        return MainReturn::eParamInvalid;
+    } catch (const boost::program_options::error& e) {
+        std::cerr << e.what() << std::endl;
+        ec=EzshError::ecMake(EzshError::eParamInvalid);
+        return;
     }
 
-    return cmd.init(context);
+    cmd.init(context);
+    if(cmd.bad())
+        ec=cmd.ecGet();
 }
 
 GroupCommand::GroupCommand(ScriptCommand&& h, ScriptCommand&& t, Script&& b, const CommandGroupTraitSPtr& tt)
@@ -79,13 +82,23 @@ GroupCommand::GroupCommand(ScriptCommand&& h, ScriptCommand&& t, Script&& b, con
     , trait_(tt)
 {}
 
-MainReturn GroupCommand::execute(const ContextSPtr& context) const
+void GroupCommand::execute(ErrorCode& ec, const ContextSPtr& context) const
 {
     auto const ptr=trait_->create(head_, *body_, tail_);
-    auto ret=ptr->init(context);
-    if(ret.bad())
-        return ret;
-    return ptr->taskDoit();
+    ptr->init(context);
+
+    if(ptr->bad())
+    {
+        ec=ptr->ecGet();
+        return ;
+    }
+
+    ptr->taskDoit();
+    if(ptr->bad())
+    {
+        ec=ptr->ecGet();
+        return ;
+    }
 }
 
 class ScriptLoad
@@ -208,30 +221,28 @@ bool Script::load(std::istream& strm, Script& spt)
     return sl.load(strm, spt);
 }
 
-MainReturn Script::execute(const ContextSPtr& context) const
+void Script::execute(ErrorCode& ec, const ContextSPtr& context) const
 {
     for(auto& ptr: script_)
     {
         auto const sc=boost::get<ScriptCommand>(&ptr);
         if(sc!=nullptr)
         {
-            const auto ret=sc->execute(context);
-            if(ret.bad())
-                return ret;
+            sc->execute(ec, context);
+            if(ec.bad())
+                return;
             continue;
         }
 
         auto const cg=boost::get<GroupCommand>(&ptr);
         if(cg!=nullptr)
         {
-            const auto ret=cg->execute(context);
-            if(ret.bad())
-                return ret;
+            cg->execute(ec, context);
+            if(ec.bad())
+                return;
             continue;
         }
     }
-
-    return MainReturn::eGood;
 }
 
 

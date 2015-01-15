@@ -164,7 +164,7 @@ public:
         return "sqliteImport";
     }
 
-    MainReturn doit()
+    void doit()
     {
         const auto& vm=mapGet();
 
@@ -179,8 +179,6 @@ public:
             sp.init(db, vm["table"].as<std::string>(), files);
 
         sp.save();
-
-        return MainReturn::eGood;
     }
 
 };

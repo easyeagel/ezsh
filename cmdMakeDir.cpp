@@ -41,7 +41,7 @@ public:
         return "mkdir";
     }
 
-    MainReturn doit()
+    void doit()
     {
         const auto& vm=mapGet();
         const bool parents=(vm.count("parents")>0) ? true : false;
@@ -62,11 +62,9 @@ public:
                     << nameGet() << ":"
                     << dir << ":" << ec.message()
                     << std::endl;
-                return MainReturn::eParamInvalid;
+                ecSet(EzshError::ecMake(EzshError::eParamInvalid));
             }
         }
-
-        return MainReturn::eGood;
     }
 
 };

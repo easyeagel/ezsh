@@ -44,7 +44,7 @@ public:
         return "context";
     }
 
-    MainReturn doit()
+    void doit()
     {
         const auto& vm=mapGet();
         auto itr=vm.find("set");
@@ -54,11 +54,9 @@ public:
         itr=vm.find("echo");
         if(itr!=vm.end())
             echoDo(itr->second.as<std::vector<std::string>>());
-
-        return MainReturn::eGood;
     }
 
-    MainReturn doDry()
+    void doDry()
     {
         BaseThis::doDry();
 
@@ -66,7 +64,6 @@ public:
         auto itr=vm.find("set");
         if(itr!=vm.end())
             setDo(itr->second.as<std::vector<std::string>>());
-        return MainReturn::eGood;
     }
 
 private:

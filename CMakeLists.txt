@@ -68,6 +68,7 @@ else(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0501 -D_SCL_SECURE_NO_WARNINGS)
     link_directories("${BoostRoot}/lib32-msvc-12.0" ${CMAKE_BINARY_DIR})
     set(CppWarningFlags "/wd4800")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4800")
 endif()
 include_directories(SYSTEM
     ${BoostRoot}/include

@@ -45,7 +45,7 @@ public:
         return "textpp";
     }
 
-    MainReturn doit()
+    void doit()
     {
         const auto& vm=mapGet();
 
@@ -85,8 +85,6 @@ public:
                 fileOne(strm, out);
             }
         }
-
-        return MainReturn::eGood;
     }
 
 private:

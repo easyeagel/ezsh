@@ -38,12 +38,18 @@ public:
         return gs;
     }
 
-    typedef enum
+    enum Code_t
     {
         eGood=0,
+        eGroupDone,
+
+        eBadStart=64,
+        eNotAllowed,
+        eParamInvalid,
+        eUnkownCommand,
 
         eCount
-    }Code_t;
+    };
 
     static ErrorCode ecMake(Code_t ec)
     {
@@ -70,13 +76,13 @@ public:
     template<typename Value>
     static bool good(Value val)
     {
-        return val==static_cast<Value>(eGood);
+        return !bad(val);
     }
 
     template<typename Value>
     static bool bad(Value val)
     {
-        return !good(val);
+        return val>static_cast<Value>(eBadStart);
     }
 
     const char* name() const noexcept(true)

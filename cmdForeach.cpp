@@ -59,10 +59,10 @@ public:
         ;
     }
 
-    MainReturn doit()
+    void doit()
     {
         if(done_)
-            return MainReturn::eGroupDone;
+            return ecSet(EzshError::ecMake(EzshError::eGroupDone));
 
         if(first_)
         {
@@ -84,7 +84,7 @@ public:
                 listPtr_.push_back(&itr->second.as<VarList>());
 
             if(listPtr_.empty())
-                return MainReturn::eGroupDone;
+                return ecSet(EzshError::ecMake(EzshError::eGroupDone));
         }
 
         auto& ptr=listPtr_.front();
@@ -96,11 +96,9 @@ public:
             if(listPtr_.empty())
                 done_=true;
         }
-
-        return MainReturn::eGood;
     }
 
-    MainReturn doDry()
+    void doDry()
     {
         BaseThis::doDry();
         return doit();
@@ -129,9 +127,8 @@ public:
         :BaseThis("endforeach - foreach group end")
     {}
 
-    MainReturn doit()
+    void doit()
     {
-        return MainReturn::eGood;
     }
 
     static const char* nameGet()

@@ -205,7 +205,7 @@ public:
         return "help";
     }
 
-    MainReturn doit()
+    void doit()
     {
         std::cerr <<
             "ezsh command [options]\n\n";
@@ -217,8 +217,6 @@ public:
             cmd->help(std::cerr);
             std::cerr << std::endl;
         }
-
-        return MainReturn::eGood;
     }
 };
 
@@ -240,13 +238,12 @@ public:
         return "option";
     }
 
-    MainReturn doit()
+    void doit()
     {
         std::cerr << "valid options list: " << std::endl;
         const auto& opts=OptionDict::dictGet();
         for(const auto& opt: opts)
             opt.second->longHelp(std::cerr);
-        return MainReturn::eGood;
     }
 };
 

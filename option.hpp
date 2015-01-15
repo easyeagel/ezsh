@@ -62,45 +62,6 @@ private:
     static bool stared_;
 };
 
-struct MainReturn
-{
-    enum Value
-    {
-        eGood=0,
-        eGroupDone,
-
-
-        eBadStart=64,
-        eNotAllowed,
-        eParamInvalid,
-        eUnkownCommand,
-    };
-
-    bool good() const
-    {
-        return val_<=eBadStart;
-    }
-
-    bool bad() const
-    {
-        return !good();
-    }
-
-    MainReturn()=default;
-    MainReturn(Value val)
-        :val_(val)
-    {}
-
-    template<typename Int=Value>
-    Int get() const
-    {
-        return static_cast<Int>(val_);
-    }
-
-private:
-    Value val_=eGood;
-};
-
 namespace bp=boost::program_options;
 
 class OptionComponent
@@ -118,17 +79,16 @@ typedef std::shared_ptr<OptionComponent> OptionComponentSPtr;
 class TaskBase: public core::ErrorBase
 {
 public:
-    virtual MainReturn taskDoit() = 0;
+    virtual void taskDoit() = 0;
 
     const ContextSPtr& contextGet() const
     {
         return context_;
     }
 
-    virtual MainReturn init(const ContextSPtr& context)
+    virtual void init(const ContextSPtr& context)
     {
         context_=context;
-        return MainReturn::eGood;
     }
 
     StdOutStream& stdOut() const
@@ -230,7 +190,7 @@ public:
         return "core";
     }
 
-    MainReturn taskDoit()
+    void taskDoit()
     {
         if(Base::dry_==false)
             return objGet().doit();
@@ -239,7 +199,7 @@ public:
         return objGet().doDry();
     }
 
-    MainReturn doDry()
+    void doDry()
     {
         this->stdOut() << objGet().nameGet() << '\n';
         const auto& vm=this->mapGet();
@@ -267,8 +227,6 @@ public:
                 this->stdOut() << l[size] << "}" << std::endl;
             }
         }
-
-        return MainReturn::eGood;
     }
 };
 

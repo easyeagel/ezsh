@@ -70,7 +70,7 @@ public:
         return "cwebp";
     }
 
-    MainReturn doit()
+    void doit()
     {
         const auto& vm=mapGet();
 
@@ -82,7 +82,7 @@ public:
         if(units_.empty())
         {
             stdErr() << "no input valid" << std::endl;
-            return MainReturn::eParamInvalid;
+            return ecSet(EzshError::ecMake(EzshError::eParamInvalid));
         }
 
         const Path out=vm["output"].as<std::string>();
@@ -93,13 +93,13 @@ public:
         if(units_.size()==1 && !outIsExist)
         {
             callCWebpMain(units_[0].in, Path(out));
-            return MainReturn::eGood;
+            return;
         }
 
         if(outIsExist && !outIsDir)
         {
             stdErr() << out << ": exist but not directory" << std::endl;
-            return MainReturn::eParamInvalid;
+            return ecSet(EzshError::ecMake(EzshError::eParamInvalid));
         }
 
         if(!outIsExist)
@@ -112,8 +112,6 @@ public:
             else
                 callCWebpMain(u.in, out/u.in.filename());
         }
-        
-        return MainReturn::eGood;
     }
 
 private:

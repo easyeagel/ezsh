@@ -52,7 +52,7 @@ public:
         return "unicode";
     }
 
-    MainReturn doit()
+    void doit()
     {
         const auto& vm=mapGet();
         auto& files=fileGet();
@@ -76,8 +76,6 @@ public:
                 (this->*fileOne)(fu);
             }
         );
-
-        return MainReturn::eGood;
     }
 
 private:

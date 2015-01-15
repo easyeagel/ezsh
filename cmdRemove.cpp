@@ -39,7 +39,7 @@ public:
         return "remove";
     }
 
-    MainReturn doit()
+    void doit()
     {
         auto& files=fileGet();
         const auto& vm=mapGet();
@@ -49,7 +49,6 @@ public:
         const bool force=vm.count("force") ? true : false;
         for(const auto& file: files.setGet())
             fileRemove(file, force);
-        return MainReturn::eGood;
     }
 
 private:

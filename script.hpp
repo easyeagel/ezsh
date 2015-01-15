@@ -202,10 +202,10 @@ public:
 		args_.clear();
 	}
 
-    MainReturn init(const ContextSPtr& context, CmdBase& cmd) const;
+    void init(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const;
 
-    MainReturn execute(const ContextSPtr& context) const;
-    MainReturn execute(const ContextSPtr& context, CmdBase& cmd) const;
+    void execute(ErrorCode& ec, const ContextSPtr& context) const;
+    void execute(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const;
 
 private:
     std::string line_;
@@ -217,7 +217,7 @@ class GroupCommand
 {
 public:
     GroupCommand(ScriptCommand&& h, ScriptCommand&& t, Script&& b, const CommandGroupTraitSPtr& tt);
-    MainReturn execute(const ContextSPtr& context) const;
+    void execute(ErrorCode& ec, const ContextSPtr& context) const;
 
 private:
     ScriptCommand head_;
@@ -257,7 +257,7 @@ public:
         script_.emplace_back(std::move(u));
     }
 
-    MainReturn execute(const ContextSPtr& context) const;
+    void execute(ErrorCode& ec, const ContextSPtr& context) const;
 
 private:
     Container script_;
@@ -282,7 +282,7 @@ public:
         :scHead_(b), script_(s), scTail_(e)
     {}
 
-    MainReturn taskDoit()
+    void taskDoit()
     {
         head_.oldContextSet(this->contextGet());
 
@@ -290,29 +290,33 @@ public:
 
         auto ctx=this->contextGet()->alloc();
 
-        auto ret=scHead_.init(ctx, head_);
-        if(ret.bad())
-            return ret;
+        scHead_.init(this->ecGet(), ctx, head_);
+        if(this->bad())
+            return;
 
-        ret=scTail_.init(ctx, tail_);
-        if(ret.bad())
-            return ret;
+        scTail_.init(this->ecGet(), ctx, tail_);
+        if(this->bad())
+            return;
 
         for(;;)
         {
-            auto ret=head_.taskDoit();
-            if(ret.bad())
-                return ret;
+            head_.taskDoit();
+            if(head_.bad())
+            {
+                if(head_.ecGet()==EzshError::ecMake(EzshError::eGroupDone))
+                    break;
+                this->ecSet(head_.ecGet());
+                return;
+            }
 
-            if(ret.get()==MainReturn::eGroupDone)
-                break;
-
-            ret=scriptGet().execute(ctx);
-            if(ret.bad())
-                return ret;
+            scriptGet().execute(this->ecGet(), ctx);
+            if(this->bad())
+                return;
         }
 
-        return tail_.taskDoit();
+        tail_.taskDoit();
+        if(tail_.bad())
+            this->ecSet(tail_.ecGet());
     }
 
     static std::unique_ptr<TaskBase> create(const ScriptCommand& b, const Script& s, const ScriptCommand& e)

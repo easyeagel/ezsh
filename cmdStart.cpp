@@ -85,10 +85,10 @@ public:
         return "start";
     }
 
-    MainReturn doit()
+    void doit()
     {
         if(check()==false)
-            return MainReturn::eGood;
+            return ecSet(EzshError::ecMake(EzshError::eParamInvalid));
 
         const auto& vm=mapGet();
         auto itr=vm.find("stdOut");
@@ -106,15 +106,14 @@ public:
             {
 				start(exec, cmd);
                 stdErr() << exec << ": not exist or not executable" << std::endl;
-                return MainReturn::eParamInvalid;
+                return ecSet(EzshError::ecMake(EzshError::eParamInvalid));
             }
 
             start(path, cmd);
         }
-        return MainReturn::eGood;
     }
 
-    MainReturn doDry()
+    void doDry()
     {
         BaseThis::doDry();
         const size_t count=cmdLines_.size();
@@ -126,8 +125,6 @@ public:
                 stdOut() << " " << c;
             stdOut() << std::endl;
         }
-
-        return MainReturn::eGood;
     }
 
 private:

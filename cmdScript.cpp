@@ -47,7 +47,7 @@ public:
         return "script";
     }
 
-    MainReturn doit()
+    void doit()
     {
         varSet();
 
@@ -70,7 +70,7 @@ public:
         }
 
         if(isExist==false)
-            return MainReturn::eParamInvalid;
+            return ecSet(EzshError::ecMake(EzshError::eParamInvalid));
 
         for(const auto& file: files)
         {
@@ -84,18 +84,16 @@ public:
             if(ok==false)
             {
                 stdErr() << file << ": load failed" << std::endl;
-                return MainReturn::eParamInvalid;
+                return ecSet(EzshError::ecMake(EzshError::eParamInvalid));
             }
         }
 
         for(auto& s: scripts_)
         {
-            const auto ret=s.execute(contextGet());
-            if(ret.bad())
-                return ret;
+            s.execute(ecGet(), contextGet());
+            if(bad())
+                return;
         }
-
-        return MainReturn::eGood;
     }
 
 private:
