@@ -67,6 +67,7 @@ else(MSVC)
     include_directories(SYSTEM ${BoostRoot})
     add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0501 -D_SCL_SECURE_NO_WARNINGS)
     link_directories("${BoostRoot}/lib32-msvc-12.0" ${CMAKE_BINARY_DIR})
+    set(CppWarningFlags "/wd4800")
 endif()
 include_directories(SYSTEM
     ${BoostRoot}/include
@@ -87,6 +88,7 @@ set(CMAKE_CXX_FLAGS_DEBUG     "${CMAKE_CXX_FLAGS_DEBUG}   ${CppWarningFlags} ${C
 set(CMAKE_CXX_FLAGS_RELEASE   "${CMAKE_CXX_FLAGS_RELEASE} ${CppWarningFlags} ${CppFlags} ${CppReleaseFlags}")
 set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}  ${ExeLinkFlags} ")
 
+add_subdirectory(core)
 add_subdirectory(core/zlib)
 add_subdirectory(core/png)
 add_subdirectory(core/jpeg)
@@ -97,7 +99,7 @@ add_subdirectory(core/sqlite)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #===============================================================================================
 set(ezshSrc
-    output.cpp parser.cpp
+    output.cpp parser.cpp error.cpp
     cmdMakeDir.cpp
     cmdTextpp.cpp cmdContext.cpp cmdScript.cpp cmdStart.cpp cmdUnicode.cpp
     cmdList.cpp cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp
@@ -109,7 +111,7 @@ set(BoostLibs
     boost_regex boost_program_options boost_filesystem
     boost_system
 )
-set(ezshLibs sqlite webp)
+set(ezshLibs core sqlite webp)
 if(MSVC)
     set(dsub "-vc120-mt-gd-1_57")
     set(rsub "-vc120-mt-1_57")

@@ -29,6 +29,7 @@
 #include<boost/program_options.hpp>
 #include<boost/asio/io_service.hpp>
 
+#include"error.hpp"
 #include"context.hpp"
 
 namespace ezsh
@@ -114,7 +115,7 @@ public:
 
 typedef std::shared_ptr<OptionComponent> OptionComponentSPtr;
 
-class TaskBase
+class TaskBase: public core::ErrorBase
 {
 public:
     virtual MainReturn taskDoit() = 0;
