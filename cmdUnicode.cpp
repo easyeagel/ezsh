@@ -68,12 +68,10 @@ public:
             fileOne=&CmdUnicode::valid;
         assert(fileOne);
 
-        for(const auto& file: files.setGet())
-            (this->*fileOne)(file);
-
-        files.scan([this, fileOne](FileUnit&& fu)
+        files.loop([this, fileOne](FileUnit&& fu)
             {
                 (this->*fileOne)(fu);
+                return errorBreak()==false;
             }
         );
     }

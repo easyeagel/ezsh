@@ -32,18 +32,25 @@ static ErrorCodeTrait errorTraitDict[]=
 #define MacroDefine(CppEC, CppMsg)\
     {EzshError::CppEC, CppMsg},
 
-    MacroDefine(eGood,  "app: good, no error")
+    MacroDefine(eGood,          "app: good, no error")
+    MacroDefine(eGroupDone,     "app: command groud done" )
+    MacroDefine(eBadStart,      "app: error code start" )
+    MacroDefine(eNotAllowed,    "app: not allowed" )
+    MacroDefine(eParamInvalid,  "app: param invalid" )
+    MacroDefine(eParamNotExist, "app: param not exist" )
+    MacroDefine(eUnkownCommand, "app: unkown command" )
 
 #undef MacroDefine
 };
 
 std::string EzshError::message(int ev) const
 {
-    if(ev>=EzshError::eCount)
-        return "未知错误";
+    if(ev>=EzshError::eEnumCount)
+        return "unkonw error";
+
     auto const dictCount=sizeof(errorTraitDict)/sizeof(errorTraitDict[0]);
-    auto end=errorTraitDict+dictCount;
-    auto itr=std::find_if(errorTraitDict, end,
+    auto const end=errorTraitDict+dictCount;
+    auto const itr=std::find_if(errorTraitDict, end,
         [ev](const ErrorCodeTrait& err)->bool
         {
             return err.ec==static_cast<EzshError::Code_t>(ev);
@@ -51,7 +58,7 @@ std::string EzshError::message(int ev) const
     );
 
     if(itr==end)
-        return "未知错误";
+        return "unkown error";
 
     return itr->msg;
 }

@@ -75,49 +75,65 @@ public:
     template<typename Value>
     StdStream& operator<<(const Value& val)
     {
-        wstrm_ << val;
+        if(quiet_==false)
+            wstrm_ << val;
         return *this;
     }
 
     StdStream& operator<<(char c)
     {
-        wstrm_ << WCharConverter::from(c);
+        if(quiet_==false)
+            wstrm_ << WCharConverter::from(c);
         return *this;
     }
 
     StdStream& operator<<(const char* str)
     {
-        wstrm_ << WCharConverter::from(str);
+        if(quiet_==false)
+            wstrm_ << WCharConverter::from(str);
         return *this;
     }
 
     StdStream& operator<<(const std::string& str)
     {
-        wstrm_ << WCharConverter::from(str);
+        if(quiet_==false)
+            wstrm_ << WCharConverter::from(str);
         return *this;
     }
 
     StdStream& operator<<( std::wostream& (*func)(std::wostream&) )
     {
-        wstrm_ << func;
+        if(quiet_==false)
+            wstrm_ << func;
         return *this;
     }
 
     StdStream& operator<<(const Path& path)
     {
-        wstrm_ << WCharConverter::from(path.native());
+        if(quiet_==false)
+            wstrm_ << WCharConverter::from(path.native());
         return *this;
     }
 
     StdStream& operator<<(const std::tm& tm)
     {
-        char buf[256];
-        std::strftime(buf, sizeof(buf), "%Y-%m-%d_%H:%M:%S", &tm);
-        *this << buf;
+        if(quiet_==false)
+        {
+            char buf[256];
+            std::strftime(buf, sizeof(buf), "%Y-%m-%d_%H:%M:%S", &tm);
+            *this << buf;
+        }
+
         return *this;
     }
 
+    void quietSet(bool v=true)
+    {
+        quiet_=v;
+    }
+
 private:
+    bool quiet_=false;
     std::wostream& wstrm_;
 };
 

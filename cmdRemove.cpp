@@ -28,11 +28,7 @@ class CmdRemove:public CmdBaseT<CmdRemove, FileSetCmdBase<>>
 public:
     CmdRemove()
         :BaseThis("remove - remove file or dir")
-    {
-        opt_.add_options()
-            ("force,f", "ignore nonexistent files and arguments")
-        ;
-    }
+    {}
 
     static const char* nameGet()
     {
@@ -42,45 +38,41 @@ public:
     void doit()
     {
         auto& files=fileGet();
-        const auto& vm=mapGet();
-
-        files.init(vm);
+        files.init(mapGet());
         files.scan();
-        const bool force=vm.count("force") ? true : false;
         for(const auto& file: files.setGet())
-            fileRemove(file, force);
+        {
+            fileRemove(file);
+            if(errorBreak())
+                return;
+        }
     }
 
 private:
-    void fileRemove(const FileUnit& file, bool force)
+    void fileRemove(const FileUnit& file)
     {
         if(!file.isExist())
         {
-            if(!force)
-                stdErr() << file.total << ": not exist" << std::endl;
+            errorSet(EzshError::ecMake(EzshError::eParamNotExist));
+            errorReport() << ": not exist: " << file.total << std::endl;
             return;
         }
 
-        boost::system::error_code ec;
+        ErrorCode ec;
         if(!file.isDir())
         {
             bf::remove(file.total, ec);
-            if(ec && !force)
-                stdErr() << file.total << ": " << ec.message() << std::endl;
-            return;
-        }
-
-        if(fileGet().isRecursive())
-        {
+        } else if(fileGet().isRecursive()) {
             bf::remove_all(file.total, ec);
-            if(ec && !force)
-                stdErr() << file.total << ": " << ec.message() << std::endl;
-            return;
+        } else {
+            bf::remove(file.total, ec);
         }
 
-        bf::remove(file.total, ec);
-        if(ec && !force)
-            stdErr() << file.total << ": " << ec.message() << std::endl;
+        if(ec.good())
+            return;
+
+        errorSet(EzshError::ecMake(EzshError::eParamInvalid));
+        errorReport() << ": " << ec.message() << ": "<< file.total << std::endl;
     }
 };
 

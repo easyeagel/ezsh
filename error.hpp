@@ -46,9 +46,10 @@ public:
         eBadStart=64,
         eNotAllowed,
         eParamInvalid,
+        eParamNotExist,
         eUnkownCommand,
 
-        eCount
+        eEnumCount
     };
 
     static ErrorCode ecMake(Code_t ec)

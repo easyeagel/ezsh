@@ -202,7 +202,10 @@ void FileSet::Component::options(bp::options_description& opt, bp::positional_op
         ("fsSizeLessEqual",     bp::value<std::string>(), "size less or equal to")
         ("fsSizeGreaterEqual",  bp::value<std::string>(), "size greater or equal to")
 
-        ("fsRecursive",                                        "operate recursively")
+        ("fsRecursive", bp::value<size_t>()
+                 ->default_value(0)
+                 ->implicit_value(eRecursiveDefault),
+             "operate recursively")
     ;
     pos.add("fsFile", -1);
 }
@@ -223,7 +226,7 @@ void FileSet::Component::shortHelp(std::ostream& strm)
 
 void FileSet::init(const bp::variables_map& vm)
 {
-    recursive_=vm.count("fsRecursive") ? true : false;
+    recursive_=vm["fsRecursive"].as<size_t>();
 
     auto itr =vm.find("fsFile");
     if(itr!=vm.end())

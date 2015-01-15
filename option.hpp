@@ -110,11 +110,16 @@ protected:
 class CmdBase: public TaskBase
 {
 protected:
-    CmdBase(const char* msg)
-        :opt_(msg)
-    {}
+    enum ErrorAttitude_t
+    {
+        eErrorIgnore, ///< 忽略错误，不设置错误码
+        eErrorQuiet,  ///< 对错误保持安静，并设置错误码
+        eErrorReport, ///< 报告错误，并继续
+        eErrorBreak,  ///< 执行错误，并中止
+    };
 
     CmdBase()=default;
+    CmdBase(const char* msg, bool ne=false);
 
 public:
     typedef bp::variables_map VarMap;
@@ -144,12 +149,31 @@ public:
         dry_=v;
     }
 
+    void errorSet(const ErrorCode& ec)
+    {
+        if(errorAtt_>eErrorIgnore)
+            ecSet(ec);
+    }
+
+    bool errorBreak() const
+    {
+        return errorAtt_>=eErrorBreak;
+    }
+
+    void init(const ContextSPtr& context) override
+    {
+        TaskBase::init(context);
+        if(errorAtt_<=eErrorQuiet)
+            stdErr().quietSet();
+    }
+
 private:
     VarMap vm_;
     bp::options_description optAll_;
     std::list<AfterParseCall> afterParseCalls_;
 
 protected:
+    ErrorAttitude_t errorAtt_=eErrorReport;
     bp::options_description opt_;
     bp::positional_options_description optPos_;
     std::vector<OptionComponentSPtr> components_;
@@ -168,7 +192,7 @@ class CmdBaseT: public Base
 
     const Obj& objGet() const
     {
-        return static_cast<Obj&>(*this);
+        return static_cast<const Obj&>(*this);
     }
 public:
     CmdBaseT(const char* msg)
@@ -227,6 +251,13 @@ public:
                 this->stdOut() << l[size] << "}" << std::endl;
             }
         }
+    }
+
+    StdErrStream& errorReport() const
+    {
+        auto& o=this->stdErr();
+        o << objGet().nameGet();
+        return o;
     }
 };
 

@@ -73,6 +73,8 @@ class FileSet
         void options(bp::options_description& opt, bp::positional_options_description& pos) override;
     };
 
+    enum:size_t {eRecursiveDefault=static_cast<size_t>(-1)};
+
 public:
     static OptionComponentSPtr componentGet()
     {
@@ -91,6 +93,7 @@ public:
         scan([this](FileUnit&& u)
             {
                 sets_.insert(std::move(u));
+                return true;
             }
         );
     }
@@ -98,7 +101,7 @@ public:
     template<typename Call>
     void scan(Call&& call)
     {
-        if(recursive_==false)
+        if(recursive_==0)
             return;
 
         for(const auto& file: files_)
@@ -106,21 +109,47 @@ public:
             FileUnit fu(file);
             if(!fu.isDir())
                 continue;
+
             typedef bf::recursive_directory_iterator DirItr;
             for(auto itr=DirItr(file), end=DirItr(); itr!=end; ++itr)
             {
+                if(static_cast<size_t>(itr.level())>=recursive_)
+                {
+                    itr.pop();
+                    continue;
+                }
+
                 FileUnit u(FileUnit::sub(itr->path(), file), file);
                 if(!isRight(u))
                     continue;
-                call(std::move(u));
+
+                if(call(std::move(u))==false)
+                    return;
             }
         }
 
     }
 
-    bool isRecursive() const
+    template<typename Call>
+    void loop(Call&& call)
+    {
+        for(const auto& f: setGet())
+        {
+            if(call(FileUnit(f))==false)
+                return;
+        }
+
+        scan(std::move(call));
+    }
+
+    size_t recursiveGet() const
     {
         return recursive_;
+    }
+
+    bool isRecursive() const
+    {
+        return recursive_==eRecursiveDefault;
     }
 
     std::set<FileUnit>& setGet()
@@ -145,7 +174,7 @@ private:
     void sizeEqual(const std::vector<std::string>& param, bool n);
 
 private:
-    bool recursive_=false;
+    size_t recursive_=-1;
     std::set<FileUnit> sets_;
 
     std::vector<std::string> files_;

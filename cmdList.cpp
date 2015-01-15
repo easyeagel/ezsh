@@ -33,9 +33,6 @@ public:
     CmdList()
         :BaseThis("list - list file or dir")
     {
-        opt_.add_options()
-            ("noError", "do not report error")
-        ;
     }
 
     static const char* nameGet()
@@ -49,21 +46,10 @@ public:
         const auto& vm=mapGet();
 
         files.init(vm);
-        const bool noError=vm.count("noError") ? true : false;
-        for(const auto& file: files.setGet())
-        {
-            if(!file.isExist() && !noError)
-            {
-                stdErr() << file.total << ": notExist" << std::endl;
-                continue;
-            }
-
-            filePrint(file);
-        }
-
-        files.scan([this](const FileUnit& u)
+        files.loop([this](const FileUnit& u)
             {
                 filePrint(u);
+                return errorBreak()==false;
             }
         );
     }
@@ -71,6 +57,13 @@ public:
 private:
     void filePrint(const FileUnit& u)
     {
+        if(!u.isExist())
+        {
+            errorSet(EzshError::ecMake(EzshError::eParamNotExist));
+            errorReport() << ": not exist" << u.total << std::endl;
+            return;
+        }
+
         std::tm tm;
 #ifndef _MSC_VER
         ::localtime_r(&u.ctime, &tm);

@@ -71,6 +71,18 @@ bool TaskPool::stared_=false;
 
 bool CmdBase::dry_=false;
 
+CmdBase::CmdBase(const char* msg, bool ne)
+    :opt_(msg)
+{
+    if(ne)
+        return;
+
+    opt_.add_options()
+        ("error", bp::value<int>()->default_value(eErrorReport),
+             "error attitude:\n0: ignore, 1: quiet, 2: report, 3: break")
+    ;
+}
+
 void CmdBase::help(std::ostream& strm)
 {
     strm << opt_ << std::endl;
@@ -99,6 +111,10 @@ void CmdBase::parse(StrCommandLine&& cl)
 
     bp::store(parser.run(), vm_);
     bp::notify(vm_);
+
+    errorAtt_=static_cast<ErrorAttitude_t>(vm_["error"].as<int>());
+    if(errorAtt_<eErrorIgnore || errorAtt_>eErrorBreak)
+        errorAtt_=eErrorReport;
 
     for(auto& call: afterParseCalls_)
         call(vm_);
@@ -210,6 +226,28 @@ public:
         std::cerr <<
             "ezsh command [options]\n\n";
 
+        const auto& vm=mapGet();
+        const auto itr=vm.find("cmd");
+        if(itr!=vm.end())
+        {
+            const auto& cmds=itr->second.as<std::vector<std::string>>();
+            for(const auto& c: cmds)
+            {
+                const auto w=CmdDict::find(c);
+                if(w==nullptr)
+                {
+                    std::cerr << "unkonw command: " << c << std::endl;
+                    continue;
+                }
+
+                const auto& tmp=w->create();
+                tmp->help(std::cerr);
+                std::cerr << std::endl;
+            }
+
+            return;
+        }
+
         for(const auto& u: CmdDict::dictGet())
         {
             const auto& trait=std::get<1>(u);
@@ -217,6 +255,7 @@ public:
             cmd->help(std::cerr);
             std::cerr << std::endl;
         }
+
     }
 };
 
