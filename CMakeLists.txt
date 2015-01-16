@@ -45,7 +45,7 @@ if(GCC)
     set(CReleaseFlags   "-g1 -O2 -DNDEBUG -flto -fuse-linker-plugin -ffat-lto-objects")
     set(CWarningFlags   "-Wall -Wextra -Wpedantic -Wformat=2 -Winit-self -Wno-long-long")
     set(CWarningFlags   "${CWarningFlags} -Wunused-value -Wunused-parameter -Wreturn-type -Wswitch")
-    set(CppFlags        "${CFlags} -std=c++11 -ftemplate-backtrace-limit=1")
+    set(CppFlags        "${CFlags} -std=c++14 -ftemplate-backtrace-limit=1")
     set(CppReleaseFlags "${CReleaseFlags}")
     set(CppWarningFlags "${CWarningFlags} -Wdisabled-optimization -Wold-style-cast -Wdelete-non-virtual-dtor")
     set(CppWarningFlags "${CppWarningFlags} -Wnon-virtual-dtor -Wuninitialized -Wunreachable-code")
@@ -68,7 +68,7 @@ else(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_WIN32_WINNT=0x0501 -D_SCL_SECURE_NO_WARNINGS)
     link_directories("${BoostRoot}/lib32-msvc-12.0" ${CMAKE_BINARY_DIR})
     set(CppWarningFlags "/wd4800")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4800")
+    set(ExeLinkFlags    "/SAFESEH:NO")
 endif()
 include_directories(SYSTEM
     ${BoostRoot}/include
@@ -110,7 +110,7 @@ set(ezshSrc
 add_executable(ezsh ${ezshSrc})
 set(BoostLibs
     boost_regex boost_program_options boost_filesystem
-    boost_system
+    boost_system boost_thread boost_coroutine boost_context
 )
 set(ezshLibs core sqlite webp)
 if(MSVC)

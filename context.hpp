@@ -29,6 +29,8 @@
 #include<iostream>
 #include<boost/variant.hpp>
 
+#include<core/server.hpp>
+
 #include"filesystem.hpp"
 
 namespace ezsh
@@ -202,12 +204,31 @@ public:
         return ContextSPtr(new C(shared_from_this()));
     }
 
+    template<typename... Args>
+    void yield(Args&&... args)
+    {
+        return coroutine_.yield(std::forward<Args&&>(args)...);
+    }
+
+    void resume()
+    {
+        coroutine_.resume();
+    }
+
+    template<typename... Args>
+    void start(Args&&... args)
+    {
+        return coroutine_.start(std::forward<Args&&>(args)...);
+    }
+
 private:
     ContextSPtr front_;
     std::map<std::string, VarSPtr> vars_;
 
     StdOutStream stdOut_;
     StdErrStream stdErr_;
+
+    core::CoroutineContext coroutine_;
 };
 
 class ContextStack

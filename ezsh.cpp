@@ -19,6 +19,7 @@
 #include<vector>
 #include<string>
 #include<clocale>
+#include<core/server.hpp>
 
 #include"encode.hpp"
 #include"option.hpp"
@@ -27,37 +28,45 @@ namespace ezsh
 {
 
 //假设命令行参数都是utf8编码
-int myMain(int argc, char* argv[])
+void myMain(int& ret, int argc, char* argv[])
 {
-    std::string cmdName(argc<=1 ? "help" : argv[1]);
-    auto trait=CmdDict::find(cmdName);
-    if(trait==nullptr)
-    {
-        std::cerr
-            << "\n\nunkown command: "
-            << argv[1] << "\n\n" << std::endl;
-        argc=2;
-        trait=CmdDict::find("help");
-    }
-    assert(trait);
-
     auto& cs=ContextStack::instance();
-    const auto& cmd=trait->create();
-    try
-    {
-        argc -= 1, argv += 1;
-        cmd->parse(StrCommandLine(argv, argv+argc));
-    } catch (const boost::program_options::error& ec) {
-        std::cerr << ec.what() << std::endl;
-        return static_cast<int>(EzshError::eParamInvalid);
-    }
+    const auto topCtx=cs.top();
+    topCtx->start([&ret, &argc, &argv]()
+        {
+            std::string cmdName(argc<=1 ? "help" : argv[1]);
+            auto trait=CmdDict::find(cmdName);
+            if(trait==nullptr)
+            {
+                std::cerr
+                    << "\n\nunkown command: "
+                    << argv[1] << "\n\n" << std::endl;
+                argc=2;
+                trait=CmdDict::find("help");
+            }
+            assert(trait);
 
-    cmd->init(cs.top());
-    if(cmd->good())
-        cmd->taskDoit();
+            const auto& cmd=trait->create();
+            try
+            {
+                argc -= 1, argv += 1;
+                cmd->parse(StrCommandLine(argv, argv+argc));
+            } catch (const boost::program_options::error& ec) {
+                std::cerr << ec.what() << std::endl;
+                ret=static_cast<int>(EzshError::eParamInvalid);
+                core::IOServer::stop();
+                return;
+            }
 
-    TaskPool::stop();
-    return cmd->ecGet().value();
+            auto& cs=ContextStack::instance();
+            cmd->init(cs.top());
+            if(cmd->good())
+                cmd->taskDoit();
+
+            core::IOServer::stop();
+            ret=cmd->ecGet().value();
+        }
+    );
 }
 
 }
@@ -79,7 +88,17 @@ int wmain(int argc, const wchar_t* argv[])
     for(const auto& arg: args)
         argData.push_back(const_cast<char*>(arg.data()));
 
-    return ezsh::myMain(argData.size(), argData.data());
+    int ret=0;
+    auto& ms=core::MainServer::instance();
+    ms.post([&argData, &ret]()
+        {
+            ezsh::myMain(ret, argData.size(), argData.data());
+        }
+    );
+
+    ms.start();
+
+    return ret;
 }
 
 #else
@@ -90,7 +109,17 @@ int main(int argc, char* argv[])
     std::setlocale(LC_CTYPE, "");
     ezsh::Environment::instance();
 
-    return ezsh::myMain(argc, argv);
+    int ret=0;
+    auto& ms=core::MainServer::instance();
+    ms.post([argc, argv, &ret]()
+        {
+            ezsh::myMain(ret, argc, argv);
+        }
+    );
+
+    ms.start();
+
+    return ret;
 }
 
 #endif

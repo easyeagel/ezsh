@@ -27,6 +27,7 @@ extern "C"
 #include<boost/filesystem.hpp>
 #include<boost/algorithm/string/predicate.hpp>
 
+#include<core/server.hpp>
 #include"option.hpp"
 
 
@@ -105,13 +106,18 @@ public:
         if(!outIsExist)
             bf::create_directories(out);
 
-        for(const auto& u: units_)
-        {
-            if(u.scaned)
-                callCWebpMain(u.base/u.in, out/u.in);
-            else
-                callCWebpMain(u.in, out/u.in.filename());
-        }
+        counter_=units_.size();
+        contextGet()->yield([&, this]()
+            {
+                for(const auto& u: units_)
+                {
+                    if(u.scaned)
+                        callCWebpMain(u.base/u.in, out/u.in);
+                    else
+                        callCWebpMain(u.in, out/u.in.filename());
+                }
+            }
+        );
     }
 
 private:
@@ -178,12 +184,15 @@ private:
 
             std::vector<const char*> cmd(cmdt, cmdt+(sizeof(cmdt)/sizeof(cmdt[0])));
             cwebp_main(cmd.size(), cmd.data());
+
+            if(--counter_==0)
+                contextGet()->resume();
         };
 
         if(concurrency_==false)
             return task();
 
-        auto& pool=TaskPool::instance();
+        auto& pool=core::IOServer::instance();
         pool.post(task);
     }
 
@@ -199,6 +208,7 @@ private:
     unsigned quality_=50;
     unsigned alphaQuality_=50;
     std::vector<Unit> units_;
+    mutable std::atomic<size_t> counter_;
 };
 
 namespace

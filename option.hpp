@@ -35,33 +35,6 @@
 namespace ezsh
 {
 
-class TaskPool
-{
-    TaskPool();
-    typedef boost::asio::io_service IOService;
-public:
-    static TaskPool& instance();
-
-    template<typename Call>
-    void post(Call&& call)
-    {
-        service_.post(std::move(call));
-    }
-
-    static void stop();
-
-private:
-    void run();
-
-private:
-    IOService service_;
-    std::vector<std::thread> threads_;
-    std::unique_ptr<IOService::work> work_;
-
-private:
-    static bool stared_;
-};
-
 namespace bp=boost::program_options;
 
 class OptionComponent

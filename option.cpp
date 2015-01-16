@@ -25,50 +25,6 @@
 
 namespace ezsh
 {
-
-TaskPool::TaskPool()
-    :threads_(std::thread::hardware_concurrency()), work_(new IOService::work(service_))
-{
-    run();
-}
-
-TaskPool& TaskPool::instance()
-{
-    static TaskPool gs;
-    return gs;
-}
-
-void TaskPool::run()
-{
-    for(auto& thd: threads_)
-    {
-        thd=std::thread([this]()
-            {
-                service_.run();
-            }
-        );
-    }
-
-    stared_=true;
-}
-
-void TaskPool::stop()
-{
-    if(stared_==false)
-        return;
-
-    auto& inst=instance();
-    inst.work_.reset();
-    for(auto& thd: inst.threads_)
-    {
-        if(thd.joinable())
-            thd.join();
-    }
-}
-
-bool TaskPool::stared_=false;
-
-
 bool CmdBase::dry_=false;
 
 CmdBase::CmdBase(const char* msg, bool ne)
