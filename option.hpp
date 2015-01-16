@@ -155,6 +155,34 @@ protected:
     static bool dry_;
 };
 
+namespace details
+{
+template<typename Call, typename... Args>
+struct CallN;
+
+template<typename Call, typename Arg>
+struct CallN<Call,Arg>
+{
+    template<typename... T>
+    static bool call(T&&... t)
+    {
+        return Call::template doit<Arg>(std::forward<T&&>(t)...);
+    }
+};
+
+template<typename Call, typename Arg, typename... Args>
+struct CallN<Call,Arg,Args...>
+{
+    template<typename... T>
+    static bool call(T&&... t)
+    {
+        return CallN<Call, Arg>::call(std::forward<T&&>(t)...)
+            ||  CallN<Call, Args...>::call(std::forward<T&&>(t)...);
+    }
+};
+
+}
+
 template<typename Obj, typename Base=CmdBase>
 class CmdBaseT: public Base
 {
@@ -167,6 +195,20 @@ class CmdBaseT: public Base
     {
         return static_cast<const Obj&>(*this);
     }
+
+    struct Print
+    {
+        template<typename T>
+        static bool doit(StdStream& strm, const boost::any& any)
+        {
+            const auto t=boost::any_cast<T>(&any);
+            if(t==nullptr)
+                return false;
+            strm << *t << std::endl;
+            return true;
+        }
+    };
+
 public:
     CmdBaseT(const char* msg)
         :Base(msg)
@@ -205,12 +247,6 @@ public:
             this->stdOut() << '\t' << v.first << ": ";
 
             const auto& any=v.second.value();
-            const auto str=boost::any_cast<std::string>(&any);
-            if(str!=nullptr)
-            {
-                this->stdOut() << *str << std::endl;
-                continue;
-            }
 
             const auto list=boost::any_cast<std::vector<std::string>>(&any);
             if(list!=nullptr)
@@ -222,7 +258,15 @@ public:
                 for(size_t i=0; i<size; ++i)
                     this->stdOut() << l[i] << ", ";
                 this->stdOut() << l[size] << "}" << std::endl;
+                continue;
             }
+
+            const auto ret=details::CallN
+                <Print, std::string, int, unsigned, size_t, double>::call(this->stdOut(), any);
+            if(ret==true)
+                continue;
+
+            this->stdOut() << std::endl;
         }
     }
 
@@ -232,6 +276,7 @@ public:
         o << objGet().nameGet();
         return o;
     }
+private:
 };
 
 class OptionOneAndOnly

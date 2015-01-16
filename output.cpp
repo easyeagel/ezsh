@@ -23,11 +23,14 @@ namespace ezsh
 void OutPut::Component::options(bp::options_description& opt, bp::positional_options_description& )
 {
     opt.add_options()
-        ("outTree",   "keep tree")
-        ("outExtPop", "extension will remove")
-        ("outDir",    bp::value<std::string>(), "all out place a dir")
-        ("outExtAdd", bp::value<std::string>(), "extension will add")
-        ("outFile",   bp::value<std::string>(), "all out to file")
+        ("outDir",        bp::value<std::string>(), "all out place a dir")
+        ("outExtAdd",     bp::value<std::string>(), "extension will add")
+        ("outExtReplace", bp::value<std::string>(), "extension will replace")
+        ("outFile",       bp::value<std::string>(), "all out to file")
+
+        ("outTree",    "keep tree")
+        ("outExtPop",  "extension will remove")
+        ("outInplace", "inplace dir")
     ;
 }
 
@@ -42,7 +45,7 @@ void OutPut::Component::longHelp (std::ostream& strm)
 
 void OutPut::Component::shortHelp(std::ostream& strm)
 {
-    strm << "  ouput - rules for output, \"option output\" for details\n\n" << std::endl;
+    strm << "  *ouput - rules for output, \"option output\" for details" << std::endl;
 }
 
 void OutPut::config(CmdBase& cmd)
@@ -52,6 +55,8 @@ void OutPut::config(CmdBase& cmd)
 
 void OutPut::init(const bp::variables_map& vm)
 {
+    inplace_=(vm.count("inplace")>0);
+
     auto itr=vm.find("outDir");
     if(itr!=vm.end())
         outDir_=itr->second.as<std::string>();
@@ -65,24 +70,25 @@ void OutPut::init(const bp::variables_map& vm)
         extAdd_ += t;
     }
 
+    itr=vm.find("outExtReplace");
+    if(itr!=vm.end())
+        extReplace_=itr->second.as<std::string>();
+
     itr=vm.find("outFile");
     if(itr!=vm.end())
         outFile_=itr->second.as<std::string>();
 
-    if(outDir_.empty())
+    if(outDir_.empty() || vm.count("outTree")>=1)
         tree_=true;
 
-    if(vm.count("outTree")>=1)
-        tree_=true;
-
-    extPop_=vm.count("outExtPop")>=1 ? true : false;
+    extPop_=(vm.count("outExtPop")>0);
 
     Path dir(outDir_);
     if(!dir.empty() && !bf::exists(dir.path()))
         bf::create_directories(dir.path());
 }
 
-void OutPut::rewrite(const FileUnit& src, FileUnit& dest)
+void OutPut::rewrite(const FileUnit& src, FileUnit& dest) const
 {
     if(!outFile_.empty())
     {
@@ -90,20 +96,33 @@ void OutPut::rewrite(const FileUnit& src, FileUnit& dest)
         return;
     }
 
-    Path self=extPop_ ? Path(src.self.stem()) : src.self;
+    Path self=src.self;
+    if(!extReplace_.empty())
+        self.replace_extension(extReplace_);
+
+    if(extPop_)
+        self=self.stem();
+
     if(!extAdd_.empty())
         self += Path(extAdd_);
+
     if(tree_==false)
         self=self.filename();
-    if(outDir_.empty())
-        dest=FileUnit(self);
-    else
+
+    if(!outDir_.empty())
         dest=FileUnit(self, outDir_);
+    else if(inplace_)
+        dest=FileUnit(self, src.base);
+    else
+        dest=FileUnit(self);
+
+    if(tree_)
+    {
+        const auto& p=dest.total.parent_path();
+        if(!p.empty() && !bf::exists(p))
+            bf::create_directories(p);
+    }
 }
 
-
-
 }
-
-
 

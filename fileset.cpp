@@ -221,7 +221,7 @@ void FileSet::Component::longHelp (std::ostream& strm)
 
 void FileSet::Component::shortHelp(std::ostream& strm)
 {
-    strm << "  fileset - rules for file select, \"option fileset\" for details\n\n" << std::endl;
+    strm << "  *fileset - rules for file select, \"option fileset\" for details" << std::endl;
 }
 
 void FileSet::init(const bp::variables_map& vm)

@@ -1,5 +1,4 @@
-
-{{{
+<pre>
 ezsh command [options]
 
 context - contrl current context:
@@ -13,11 +12,11 @@ cwebp - webp encode:
   --error arg (=2)                error attitude:
                                   0: ignore, 1: quiet, 2: report, 3: break
   -c [ --concurrency ]            concurrency encode with threads
-  -i [ --input ] arg              file or dir to encode
-  -o [ --output ] arg             file or dir for output
   -q [ --quality ] arg (=50)      image quality
   -a [ --alphaQuality ] arg (=50) image alpha channel quality
 
+  *ouput - rules for output, "option output" for details
+  *fileset - rules for file select, "option fileset" for details
 
 help - show help message:
   --error arg (=2)      error attitude:
@@ -30,9 +29,7 @@ list - list file or dir:
   --error arg (=2)      error attitude:
                         0: ignore, 1: quiet, 2: report, 3: break
 
-  fileset - rules for file select, "option fileset" for details
-
-
+  *fileset - rules for file select, "option fileset" for details
 
 mkdir - make dir:
   --error arg (=2)      error attitude:
@@ -51,9 +48,7 @@ remove - remove file or dir:
   --error arg (=2)      error attitude:
                         0: ignore, 1: quiet, 2: report, 3: break
 
-  fileset - rules for file select, "option fileset" for details
-
-
+  *fileset - rules for file select, "option fileset" for details
 
 script - run file as ezsh script:
   --error arg (=2)      error attitude:
@@ -90,12 +85,8 @@ textpp - textpp file or dir:
   -f [ --force ]        ignore nonexistent files and arguments
   -D [ --define ] arg   define a macro
 
-  ouput - rules for output, "option output" for details
-
-
-  fileset - rules for file select, "option fileset" for details
-
-
+  *ouput - rules for output, "option output" for details
+  *fileset - rules for file select, "option fileset" for details
 
 unicode - unicode file or dir:
   --error arg (=2)      error attitude:
@@ -104,7 +95,6 @@ unicode - unicode file or dir:
   --bomRemove           remove BOM in file header
   --valid               check files utf8 encode
 
-  fileset - rules for file select, "option fileset" for details
-}}}
+  *fileset - rules for file select, "option fileset" for details
 
-
+</pre>

@@ -52,7 +52,7 @@ public:
         return "output";
     }
 
-    void rewrite(const FileUnit& src, FileUnit& dest);
+    void rewrite(const FileUnit& src, FileUnit& dest) const;
 
 private:
     void afterParse(const bp::variables_map& vm);
@@ -60,6 +60,8 @@ private:
 private:
     bool tree_=false;
     bool extPop_=false;
+    bool inplace_=false;
+    std::string extReplace_;
     std::string extAdd_;
     std::string outDir_;
     std::string outFile_;

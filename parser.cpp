@@ -34,11 +34,11 @@ namespace xpr
 
     //统一替换模式: ${@operator, *value, +list}~
     sregex gsNotComma   =~(set=',','}');
-    sregex gsNotCommaStr=+gsNotComma;
+    sregex gsNotCommaStr=skip(blank)(+gsNotComma);
     sregex gsReplacePattern=as_xpr("${")
-        >> *blank >> gsNotCommaStr
-        >> *(*blank >> ',' >> *blank >> gsNotCommaStr)
-        >> *blank >> '}'
+        >> gsNotCommaStr
+        >> *(',' >> gsNotCommaStr)
+        >> '}'
         >> repeat<0,1>('~');
 }
 
