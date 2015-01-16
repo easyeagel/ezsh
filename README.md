@@ -1,5 +1,5 @@
 
-{{{
+<pre>
 ezsh command [options]
 
 context - contrl current context:
@@ -105,6 +105,6 @@ unicode - unicode file or dir:
   --valid               check files utf8 encode
 
   fileset - rules for file select, "option fileset" for details
-}}}
+</pre>
 
 
