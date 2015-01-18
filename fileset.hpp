@@ -48,6 +48,17 @@ struct FileUnit
         return status.type()!=bf::file_type::file_not_found;
     }
 
+    bool isChild(const FileUnit& parent) const
+    {
+        return total.isChild(parent.total);
+    }
+
+    void doneSet() const
+    {
+        const_cast<bool&>(done)=true;
+    }
+
+    bool done=false;
     bool scaned;
 
     Path self;
@@ -119,7 +130,7 @@ public:
                     continue;
                 }
 
-                FileUnit u(FileUnit::sub(itr->path(), file), file);
+                FileUnit u(FileUnit::sub(itr->path(), file), file, true);
                 if(!isRight(u))
                     continue;
 
@@ -168,6 +179,8 @@ public:
     {
         return "fileset";
     }
+
+    void subtreeDone(const FileUnit& u);
 
 private:
     void afterParse(const bp::variables_map& vm);

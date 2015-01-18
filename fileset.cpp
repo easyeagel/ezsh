@@ -23,6 +23,7 @@
 #include<deque>
 #include<locale>
 #include<algorithm>
+#include<boost/algorithm/string/predicate.hpp>
 
 #include"glob.hpp"
 #include"encode.hpp"
@@ -319,6 +320,15 @@ void FileSet::config(CmdBase& cmd)
 {
     cmd.componentPush(componentGet());
     cmd.afterParseCall(std::bind(&FileSet::afterParse, this, std::placeholders::_1));
+}
+
+void FileSet::subtreeDone(const FileUnit& u)
+{
+    for(auto& s: sets_)
+    {
+        if(s.isChild(u))
+            s.doneSet();
+    }
 }
 
 namespace

@@ -32,13 +32,14 @@ static ErrorCodeTrait errorTraitDict[]=
 #define MacroDefine(CppEC, CppMsg)\
     {EzshError::CppEC, CppMsg},
 
-    MacroDefine(eGood,          "app: good, no error")
-    MacroDefine(eGroupDone,     "app: command groud done" )
-    MacroDefine(eBadStart,      "app: error code start" )
-    MacroDefine(eNotAllowed,    "app: not allowed" )
-    MacroDefine(eParamInvalid,  "app: param invalid" )
-    MacroDefine(eParamNotExist, "app: param not exist" )
-    MacroDefine(eUnkownCommand, "app: unkown command" )
+    MacroDefine(eGood,              "app: good, no error")
+    MacroDefine(eGroupDone,         "app: command groud done" )
+    MacroDefine(eBadStart,          "app: error code start" )
+    MacroDefine(eNotAllowed,        "app: not allowed" )
+    MacroDefine(eParamInvalid,      "app: param invalid" )
+    MacroDefine(eParamNotExist,     "app: param not exist" )
+    MacroDefine(eOperationFailed,   "app: operation failed")
+    MacroDefine(eUnkownCommand,     "app: unkown command" )
 
 #undef MacroDefine
 };

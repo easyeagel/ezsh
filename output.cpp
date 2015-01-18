@@ -23,14 +23,16 @@ namespace ezsh
 void OutPut::Component::options(bp::options_description& opt, bp::positional_options_description& )
 {
     opt.add_options()
+        ("outTree",    "keep tree")
+
+        ("outInplace",    "inplace dir")
         ("outDir",        bp::value<std::string>(), "all out place a dir")
-        ("outExtAdd",     bp::value<std::string>(), "extension will add")
-        ("outExtReplace", bp::value<std::string>(), "extension will replace")
+        ("outDirInto",    bp::value<std::string>(), "all out into a dir")
         ("outFile",       bp::value<std::string>(), "all out to file")
 
-        ("outTree",    "keep tree")
-        ("outExtPop",  "extension will remove")
-        ("outInplace", "inplace dir")
+        ("outExtPop",     "extension will remove")
+        ("outExtAdd",     bp::value<std::string>(), "extension will add")
+        ("outExtReplace", bp::value<std::string>(), "extension will replace")
     ;
 }
 
@@ -51,17 +53,48 @@ void OutPut::Component::shortHelp(std::ostream& strm)
 void OutPut::config(CmdBase& cmd)
 {
     cmd.componentPush(componentGet());
+
+    modeOnly_.add({"outDir", "outDirInto", "outFile", "outInplace"});
+    modeOnly_.doit(cmd);
+}
+
+void OutPut::modeInit(const std::string& str, const bp::variables_map& vm)
+{
+    bool dirCreate=false;
+    if(str=="outInplace")
+    {
+        mode_=eModeInplace;
+        tree_=true;
+    } else if(str=="outDir") {
+        mode_=eModeDir;
+        dirCreate=true;
+    }else if(str=="outDirInto") {
+        mode_=eModeDirInto;
+        tree_=true;
+        dirCreate=true;
+    } else if(str=="outFile") {
+        mode_=eModeFile;
+    }
+
+    auto itr=vm.find(str);
+    if(itr!=vm.end())
+        modeStr_=itr->second.as<std::string>();
+
+    if(dirCreate)
+    {
+        Path dir(modeStr_);
+        if(!dir.empty() && !bf::exists(dir.path()))
+            bf::create_directories(dir.path());
+    }
 }
 
 void OutPut::init(const bp::variables_map& vm)
 {
-    inplace_=(vm.count("inplace")>0);
+    modeInit(modeOnly_.oneGet(), vm);
 
-    auto itr=vm.find("outDir");
-    if(itr!=vm.end())
-        outDir_=itr->second.as<std::string>();
+    extPop_=(vm.count("outExtPop")>0);
 
-    itr=vm.find("outExtAdd");
+    auto itr=vm.find("outExtAdd");
     if(itr!=vm.end())
     {
         const auto t=itr->second.as<std::string>();
@@ -74,28 +107,12 @@ void OutPut::init(const bp::variables_map& vm)
     if(itr!=vm.end())
         extReplace_=itr->second.as<std::string>();
 
-    itr=vm.find("outFile");
-    if(itr!=vm.end())
-        outFile_=itr->second.as<std::string>();
-
-    if(outDir_.empty() || vm.count("outTree")>=1)
+    if(vm.count("outTree")>=1)
         tree_=true;
-
-    extPop_=(vm.count("outExtPop")>0);
-
-    Path dir(outDir_);
-    if(!dir.empty() && !bf::exists(dir.path()))
-        bf::create_directories(dir.path());
 }
 
-void OutPut::rewrite(const FileUnit& src, FileUnit& dest) const
+void OutPut::rewrite(const FileUnit& src, FileUnit& dest, bool dirCreate) const
 {
-    if(!outFile_.empty())
-    {
-        dest=FileUnit(outFile_);
-        return;
-    }
-
     Path self=src.self;
     if(!extReplace_.empty())
         self.replace_extension(extReplace_);
@@ -109,19 +126,34 @@ void OutPut::rewrite(const FileUnit& src, FileUnit& dest) const
     if(tree_==false)
         self=self.filename();
 
-    if(!outDir_.empty())
-        dest=FileUnit(self, outDir_);
-    else if(inplace_)
-        dest=FileUnit(self, src.base);
-    else
-        dest=FileUnit(self);
+    switch(mode_)
+    {
+        case eModeInplace:
+            dest=FileUnit(self, src.base);
+            break;
+        case eModeDir:
+            dest=FileUnit(self, modeStr_);
+            break;
+        case eModeDirInto:
+        {
+            if(src.base.empty())
+                dest=FileUnit(self, modeStr_);
+            else
+                dest=FileUnit(src.base.filename()/self, modeStr_);
+            break;
+        }
+        case eModeFile:
+            dest=FileUnit(self);
+            break;
+    }
 
-    if(tree_)
+    if(dirCreate==true)
     {
         const auto& p=dest.total.parent_path();
         if(!p.empty() && !bf::exists(p))
             bf::create_directories(p);
     }
+
 }
 
 }

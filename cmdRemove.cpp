@@ -40,8 +40,11 @@ public:
         auto& files=fileGet();
         files.init(mapGet());
         files.scan();
-        for(const auto& file: files.setGet())
+        for(auto& file: files.setGet())
         {
+            if(file.done)
+                continue;
+
             fileRemove(file);
             if(errorBreak())
                 return;
@@ -64,12 +67,16 @@ private:
             bf::remove(file.total, ec);
         } else if(fileGet().isRecursive()) {
             bf::remove_all(file.total, ec);
+            fileGet().subtreeDone(file);
         } else {
             bf::remove(file.total, ec);
         }
 
         if(ec.good())
+        {
+            file.doneSet();
             return;
+        }
 
         errorSet(EzshError::ecMake(EzshError::eParamInvalid));
         errorReport() << ": " << ec.message() << ": "<< file.total << std::endl;

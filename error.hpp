@@ -47,6 +47,7 @@ public:
         eNotAllowed,
         eParamInvalid,
         eParamNotExist,
+        eOperationFailed,
         eUnkownCommand,
 
         eEnumCount

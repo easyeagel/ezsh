@@ -35,6 +35,8 @@ class OutPut
         void options(bp::options_description& opt, bp::positional_options_description& pos) override;
     };
 
+    enum Mode_t {eModeInplace, eModeDir, eModeDirInto, eModeFile};
+
 public:
     static OptionComponentSPtr componentGet()
     {
@@ -52,19 +54,21 @@ public:
         return "output";
     }
 
-    void rewrite(const FileUnit& src, FileUnit& dest) const;
+    void rewrite(const FileUnit& src, FileUnit& dest, bool dirCreate=true) const;
 
 private:
     void afterParse(const bp::variables_map& vm);
+    void modeInit(const std::string& str, const bp::variables_map& vm);
 
 private:
     bool tree_=false;
     bool extPop_=false;
-    bool inplace_=false;
     std::string extReplace_;
     std::string extAdd_;
-    std::string outDir_;
-    std::string outFile_;
+
+    Mode_t mode_=eModeInplace;
+    std::string modeStr_;
+    OptionOneAndOnly modeOnly_;
 };
 
 template<typename Base=CmdBase>

@@ -111,6 +111,24 @@ public:
     {
         return static_cast<const bf::path&>(*this);
     }
+
+    bool isChild(const Path& parent) const
+    {
+        auto b=begin();
+        auto const e=end();
+        auto pb=parent.begin();
+        auto const pe=parent.end();
+
+        while(b!=e && pb!=pe && *b==*pb)
+        {
+            ++b;
+            ++pb;
+        }
+
+        auto const ret=(pb==pe && b!=e);
+        return ret;
+    }
+
 };
 
 }  // namespace ezsh
