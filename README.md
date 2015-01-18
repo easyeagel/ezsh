@@ -8,6 +8,13 @@ context - contrl current context:
   --echo arg            echo this params
 
 
+copy - copy file or dir:
+  --error arg (=2)      error attitude:
+                        0: ignore, 1: quiet, 2: report, 3: break
+
+  *ouput - rules for output, "option output" for details
+  *fileset - rules for file select, "option fileset" for details
+
 cwebp - webp encode:
   --error arg (=2)                error attitude:
                                   0: ignore, 1: quiet, 2: report, 3: break
@@ -98,3 +105,4 @@ unicode - unicode file or dir:
   *fileset - rules for file select, "option fileset" for details
 
 </pre>
+
