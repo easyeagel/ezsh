@@ -205,26 +205,38 @@ private:
     }
 
 #ifdef WIN32
-    void stdOutReset(::STARTUPINFOW& info)
+    void stdIOReset(::STARTUPINFOW& info)
     {
-        if(stdOut_.empty())
-            return;
+		info.dwFlags |= STARTF_USESTDHANDLES;
 
-        Path path(stdOut_);
+		handleReset(stdIn_, ::GetStdHandle(STD_INPUT_HANDLE), info.hStdInput);
+		handleReset(stdOut_, ::GetStdHandle(STD_OUTPUT_HANDLE), info.hStdOutput);
+		handleReset(stdErr_, ::GetStdHandle(STD_ERROR_HANDLE),  info.hStdError);
+    }
+
+    void handleReset(const std::string& file, HANDLE src, HANDLE& dest)
+    {
+		if (file.empty())
+		{
+			HANDLE out = INVALID_HANDLE_VALUE;
+			auto const prc = ::GetCurrentProcess();
+			::DuplicateHandle(prc, src, prc, &out, 0, true, DUPLICATE_SAME_ACCESS);
+			dest = out;
+			return;
+		}
+
+        Path path(file);
         path.make_preferred();
-		::SECURITY_ATTRIBUTES att;
-		std::memset(&att, 0, sizeof(att));
-		att.nLength = sizeof(att);
-		att.bInheritHandle = true;
+        ::SECURITY_ATTRIBUTES att;
+        std::memset(&att, 0, sizeof(att));
+        att.nLength = sizeof(att);
+        att.bInheritHandle = true;
         auto handle=::CreateFileW(path.native().c_str(),
             GENERIC_WRITE, FILE_SHARE_READ, &att,
-			OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr
+            OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr
         );
 
-		auto const error = ::GetLastError();
-        assert(handle!=INVALID_HANDLE_VALUE);
-        info.hStdOutput=handle;
-		info.dwFlags |= STARTF_USESTDHANDLES;
+		dest = handle;
     }
 
     int start(const Path& exe, const CmdLine& cl)
@@ -250,7 +262,7 @@ private:
 		si.cb = sizeof(si);
 		std::memset(&pi, 0, sizeof(pi) );
 
-        stdOutReset(si);
+        stdIOReset(si);
 
 		if (!::CreateProcessW(nullptr,
 			const_cast<wchar_t*>(cmd.data()),        // Command line
@@ -283,7 +295,7 @@ private:
 		return 0;
     }
 #else
-    void stdOutReset()
+    void stdIOReset()
     {
         if(stdOut_.empty())
             return;
@@ -300,7 +312,7 @@ private:
         {
             case 0://child
             {
-                stdOutReset();
+                stdIOReset();
                 ::execv(exe.c_str(), cmd.data());
                 ::perror("execv");
                 ::exit(EXIT_FAILURE);
@@ -321,7 +333,9 @@ private:
 
 #endif //__MSC_VER
 private:
+    std::string stdIn_;
     std::string stdOut_;
+    std::string stdErr_;
     std::vector<CmdLine> cmdLines_;
 };
 
