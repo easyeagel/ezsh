@@ -49,6 +49,7 @@ public:
         eParamNotExist,
         eOperationFailed,
         eUnkownCommand,
+        ePatternReplaceFailed,
 
         eEnumCount
     };

@@ -21,6 +21,8 @@
 #include<boost/xpressive/xpressive.hpp>
 #include<boost/algorithm/string/trim.hpp>
 
+#include"error.hpp"
+
 namespace ezsh
 {
 
@@ -31,11 +33,6 @@ namespace xpr
     //变量名或宏名
     extern sregex gsVarName;
     extern sregex gsMacroName;
-
-    //替换模式
-    extern sregex gsNotComma;
-    extern sregex gsNotCommaStr;
-    extern sregex gsReplacePattern;
 }
 
 class ReplacePattern
@@ -60,12 +57,7 @@ public:
         std::vector<Param> params;
     };
 
-    static const xpr::sregex& regexGet()
-    {
-        return xpr::gsReplacePattern;
-    };
-
-    void init(const xpr::smatch& what);
+    void init(const std::vector<std::string>& what);
 
     const std::vector<Operator>& operatorsGet() const
     {
@@ -75,6 +67,118 @@ public:
     bool needSplit() const
     {
         return needSplit_;
+    }
+
+    template<typename OutItr, typename InItr, typename Format>
+    static OutItr replace(ErrorCode& ec, OutItr out, InItr b, InItr e, Format&& format)
+    {
+        std::string source;
+        ReplacePattern pattern;
+        for(;;)
+        {
+            if(b==e)
+                return out;
+
+            switch(*b)
+            {
+                case '!': //只在 !! 或 !$ 解析转义
+                {
+                    ++b;
+                    if(b==e)
+                    {
+                        EzshError::ecMake(EzshError::ePatternReplaceFailed);
+                        return out;
+                    }
+
+                    const auto n=*b;
+                    if(n=='!' || n=='$')
+                    {
+                        *out++=n;
+                    } else {
+                        *out++='!';
+                        *out++=n;
+                    }
+
+                    ++b;
+                    continue;
+                }
+                case '$': //模式开头 ${
+                {
+                    ++b;
+                    if(b==e)
+                    {
+                        EzshError::ecMake(EzshError::ePatternReplaceFailed);
+                        return out;
+                    }
+
+                    const auto n=*b;
+                    if(n!='{')
+                    {
+                        *out++='$';
+                        *out++=n;
+                        ++b;
+                        continue;
+                    }
+
+                    //找到最后的 }
+                    source.clear();
+                    source.push_back('$');
+                    source.push_back('{');
+                    for(;;)
+                    {
+                        ++b;
+                        if(b==e)
+                        {
+                            EzshError::ecMake(EzshError::ePatternReplaceFailed);
+                            return out;
+                        }
+
+                        source.push_back(*b);
+                        if(source.size()>=4*1024)
+                        {
+                            EzshError::ecMake(EzshError::ePatternReplaceFailed);
+                            return out;
+                        }
+
+                        if(*b=='}')
+                        {
+                            ++b;
+                            if(b!=e && *b=='~')
+                            {
+                                source.push_back(*b);
+                                ++b;
+                            }
+
+                            pattern.reset();
+                            split(ec, source, pattern);
+                            if(ec.bad())
+                                return out;
+                            out=format(ec, out, pattern);
+                            if(ec.bad())
+                                return out;
+                            break;
+                        }
+                    }
+
+                    break;
+                }
+                default:
+                {
+                    *out++ = *b++;
+                    break;
+                }
+            }
+        }
+
+        return out;
+    }
+
+    static void split(ErrorCode& ec, const std::string& source, ReplacePattern& dest);
+
+    void reset()
+    {
+        needSplit_=false;
+        operators_.clear();
     }
 
 private:

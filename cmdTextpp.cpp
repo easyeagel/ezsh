@@ -124,17 +124,13 @@ private:
 
     void fileOne(std::istream& strm, OutItr& out) const
     {
-        std::string in;
+        ErrorCode ec;
         std::istreambuf_iterator<char> itr(strm);
         std::istreambuf_iterator<char> const end;
-        std::copy(itr, end, std::back_inserter(in));
-
-        xpr::regex_replace(out, in.begin(), in.end(), ReplacePattern::regexGet(),
-            [this](const xpr::smatch& what, OutItr& out) -> OutItr
+        out=ReplacePattern::replace(ec, out, itr, end,
+            [this](ErrorCode& ec, OutItr out, const ReplacePattern& what) -> OutItr
             {
-                ReplacePattern rp;
-                rp.init(what);
-                matchOne(rp, out);
+                matchOne(what, out);
                 return out;
             }
         );

@@ -40,6 +40,7 @@ static ErrorCodeTrait errorTraitDict[]=
     MacroDefine(eParamNotExist,     "app: param not exist" )
     MacroDefine(eOperationFailed,   "app: operation failed")
     MacroDefine(eUnkownCommand,     "app: unkown command" )
+    MacroDefine(ePatternReplaceFailed, "app: pattern replace error")
 
 #undef MacroDefine
 };

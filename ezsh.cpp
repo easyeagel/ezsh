@@ -23,6 +23,7 @@
 
 #include"encode.hpp"
 #include"option.hpp"
+#include"parser.hpp"
 
 namespace ezsh
 {

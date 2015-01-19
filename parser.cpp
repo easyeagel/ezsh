@@ -31,36 +31,14 @@ namespace xpr
     //变量名或宏名
     sregex gsVarName   = (alpha|'_') >> *(alnum|'_');
     sregex gsMacroName = gsVarName;
-
-    //统一替换模式: ${@operator, *value, +list}~
-    sregex gsNotComma   =~(set=',','}');
-    sregex gsNotCommaStr=+gsNotComma;
-    sregex gsReplacePattern=as_xpr("${")
-        >> *blank >> gsNotCommaStr >> *blank
-        >> *(',' >> *blank >> gsNotCommaStr >> *blank)
-        >> *blank >> '}'
-        >> repeat<0,1>('~');
 }
 
-void ReplacePattern::init(const xpr::smatch& what)
+void ReplacePattern::init(const std::vector<std::string>& what)
 {
-    if(what.str().back()=='~')
-        needSplit_=true;
-
-    using namespace xpr;
-
-    auto begin = what.nested_results().begin();
-    auto end   = what.nested_results().end();
-
-    sregex_id_filter_predicate name(gsNotCommaStr.regex_id());
-
     Operator op;
-    std::for_each(
-        boost::make_filter_iterator(name, begin, end),
-        boost::make_filter_iterator(name, end, end),
-        [this, &op](const smatch& m)
+    std::for_each(what.begin(), what.end(),
+        [this, &op](const std::string& str)
         {
-            const auto& str=m.str();
             if(str.empty())
                 return;
 
@@ -92,6 +70,33 @@ void ReplacePattern::init(const xpr::smatch& what)
 
     if(!op.name.empty())
         operators_.emplace_back(std::move(op));
+}
+
+void ReplacePattern::split(ErrorCode& ec, const std::string& source, ReplacePattern& dest)
+{
+    auto b=source.begin();
+    b += 2; //跳过 ${
+
+    auto e=source.end()-1;
+    if(source.back()=='~')
+    {
+        dest.needSplit_=true;
+        e -= 1;
+    }
+
+
+    std::vector<std::string> token;
+    for(;;)
+    {
+        if(b>=e)
+            break;
+        auto w=std::find(b, e, ',');
+        token.emplace_back(b, w);
+        b=w+1;
+        boost::algorithm::trim(token.back());
+    }
+
+    dest.init(token);
 }
 
 }

@@ -230,19 +230,19 @@ std::string Context::stringGet(const std::string& name, const std::string& def) 
 
 void Context::cmdlineReplace(const StrCommandLine& cmd, StrCommandLine& dest) const
 {
+    ErrorCode ec;
     dest.clear();
     for(const auto& s: cmd)
     {
         std::string d;
         const auto currentSize=dest.size();
-        xpr::regex_replace(std::back_inserter(d), s.begin(), s.end(), ReplacePattern::regexGet(),
-            [this, &s, &dest](const xpr::smatch& match) -> std::string
+        ReplacePattern::replace(ec, std::back_inserter(d), s.begin(), s.end(),
+            [this, &s, &dest](ErrorCode& ec, std::back_insert_iterator<std::string> out, const ReplacePattern& rp)
             {
-                ReplacePattern rp;
-                rp.init(match);
-
                 ContextReplace cr;
-                return cr.replace(*this, rp, match.str()==s && rp.needSplit(), dest);
+                auto ret=cr.replace(*this, rp, rp.needSplit(), dest);
+                out=std::copy(ret.begin(), ret.end(), out);
+                return out;
             }
         );
 
