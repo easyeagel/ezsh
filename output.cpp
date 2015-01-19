@@ -143,7 +143,7 @@ void OutPut::rewrite(const FileUnit& src, FileUnit& dest, bool dirCreate) const
             break;
         }
         case eModeFile:
-            dest=FileUnit(self);
+            dest=FileUnit(modeStr_);
             break;
     }
 
