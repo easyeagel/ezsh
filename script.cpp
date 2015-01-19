@@ -61,7 +61,10 @@ void ScriptCommand::execute(ErrorCode& ec, const ContextSPtr& context, CmdBase& 
 void ScriptCommand::init(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const
 {
     StrCommandLine args;
-    context->cmdlineReplace(cmdlineGet(), args);
+    context->cmdlineReplace(ec, cmdlineGet(), args);
+    if(ec.bad())
+        return;
+
     try
     {
         cmd.parse(std::move(args));

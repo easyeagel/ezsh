@@ -29,7 +29,7 @@ namespace xpr
     using namespace boost::xpressive;
     
     //变量名或宏名
-    sregex gsVarName   = (alpha|'_') >> *(alnum|'_');
+    sregex gsVarName   = (alpha|'_') >> keep(*(alnum|'_'));
     sregex gsMacroName = gsVarName;
 }
 
@@ -72,7 +72,7 @@ void ReplacePattern::init(const std::vector<std::string>& what)
         operators_.emplace_back(std::move(op));
 }
 
-void ReplacePattern::split(ErrorCode& ec, const std::string& source, ReplacePattern& dest)
+void ReplacePattern::split(ErrorCode& , const std::string& source, ReplacePattern& dest)
 {
     auto b=source.begin();
     b += 2; //跳过 ${

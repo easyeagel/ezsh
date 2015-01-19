@@ -130,13 +130,13 @@ private:
         out=ReplacePattern::replace(ec, out, itr, end,
             [this](ErrorCode& ec, OutItr out, const ReplacePattern& what) -> OutItr
             {
-                matchOne(what, out);
+                matchOne(ec, what, out);
                 return out;
             }
         );
     }
 
-    void matchOne(const ReplacePattern& match, OutItr& out) const
+    void matchOne(ErrorCode& ec, const ReplacePattern& match, OutItr& out) const
     {
         for(const auto& opt: match.operatorsGet())
         {
@@ -151,6 +151,8 @@ private:
                 includeReplace(opt, out);
                 continue;
             }
+
+            ec=EzshError::ecMake(EzshError::eUnkownTextppOperator, opt.name);
         }
     }
 

@@ -31,6 +31,7 @@
 
 #include<core/server.hpp>
 
+#include"error.hpp"
 #include"filesystem.hpp"
 
 namespace ezsh
@@ -196,7 +197,7 @@ public:
     std::string stringGet(const std::string& name, const std::string& def) const;
 
     //xxxx${varName, N}xxxx
-    void cmdlineReplace(const StrCommandLine& cmd, StrCommandLine& dest) const;
+    void cmdlineReplace(ErrorCode& ec, const StrCommandLine& cmd, StrCommandLine& dest) const;
 
     template<typename C=Context>
     ContextSPtr alloc()

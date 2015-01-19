@@ -228,16 +228,15 @@ std::string Context::stringGet(const std::string& name, const std::string& def) 
     return listVal->front();
 }
 
-void Context::cmdlineReplace(const StrCommandLine& cmd, StrCommandLine& dest) const
+void Context::cmdlineReplace(ErrorCode& ec, const StrCommandLine& cmd, StrCommandLine& dest) const
 {
-    ErrorCode ec;
     dest.clear();
     for(const auto& s: cmd)
     {
         std::string d;
         const auto currentSize=dest.size();
         ReplacePattern::replace(ec, std::back_inserter(d), s.begin(), s.end(),
-            [this, &s, &dest](ErrorCode& ec, std::back_insert_iterator<std::string> out, const ReplacePattern& rp)
+            [this, &s, &dest](ErrorCode& , std::back_insert_iterator<std::string> out, const ReplacePattern& rp)
             {
                 ContextReplace cr;
                 auto ret=cr.replace(*this, rp, rp.needSplit(), dest);
@@ -245,6 +244,9 @@ void Context::cmdlineReplace(const StrCommandLine& cmd, StrCommandLine& dest) co
                 return out;
             }
         );
+
+        if(ec.bad())
+            return;
 
         if(currentSize==dest.size())
             dest.emplace_back(std::move(d));
