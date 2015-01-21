@@ -235,7 +235,8 @@ void Context::cmdlineReplace(ErrorCode& ec, const StrCommandLine& cmd, StrComman
     {
         std::string d;
         const auto currentSize=dest.size();
-        ReplacePattern::replace(ec, std::back_inserter(d), s.begin(), s.end(),
+        PatternReplace pr;
+        pr.replace(ec, std::back_inserter(d), s.begin(), s.end(),
             [this, &s, &dest](ErrorCode& , std::back_insert_iterator<std::string> out, const ReplacePattern& rp)
             {
                 ContextReplace cr;

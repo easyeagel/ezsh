@@ -72,7 +72,7 @@ void ReplacePattern::init(const std::vector<std::string>& what)
         operators_.emplace_back(std::move(op));
 }
 
-void ReplacePattern::split(ErrorCode& , const std::string& source, ReplacePattern& dest)
+void PatternReplace::split(ErrorCode& , const std::string& source, ReplacePattern& dest)
 {
     auto b=source.begin();
     b += 2; //跳过 ${
@@ -80,7 +80,7 @@ void ReplacePattern::split(ErrorCode& , const std::string& source, ReplacePatter
     auto e=source.end()-1;
     if(source.back()=='~')
     {
-        dest.needSplit_=true;
+        dest.needSplitSet(true);
         e -= 1;
     }
 
@@ -98,6 +98,29 @@ void ReplacePattern::split(ErrorCode& , const std::string& source, ReplacePatter
 
     dest.init(token);
 }
+
+namespace test
+{
+
+void patternReplaceTest()
+{
+#ifndef _MSC_VER
+    PatternReplace pr;
+    const char in[]="kk ${lgb, ${lgb}}";
+    std::string out;
+    ErrorCode ec;
+    pr.replace(ec, std::back_inserter(out), std::begin(in), std::end(in),
+        [](ErrorCode& , auto itr, const ReplacePattern& )
+        {
+            const std::string name="name";
+            return std::copy(name.begin(), name.end(), itr);
+        }
+    );
+#endif
+}
+
+}
+
 
 }
 

@@ -107,6 +107,9 @@ int wmain(int argc, const wchar_t* argv[])
 //非Windows系统假设默认为utf8
 int main(int argc, char* argv[])
 {
+    ezsh::test::patternReplaceTest();
+
+
     std::setlocale(LC_CTYPE, "");
     ezsh::Environment::instance();
 

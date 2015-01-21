@@ -27,16 +27,44 @@
 namespace ezsh
 {
 
+class TextppContext
+{
+public:
+
+private:
+    std::map<std::string, std::string> dict_;
+};
+
 class CmdTextpp:public CmdBaseT<CmdTextpp, FileSetCmdBase<OutPutCmdBase<>>>
 {
     typedef CmdBaseT<CmdTextpp, FileSetCmdBase> BaseThis;
     typedef std::ostreambuf_iterator<char> OutItr;
+
+    class Format
+    {
+    public:
+        Format(const CmdTextpp* c)
+            :cmd_(c)
+        {}
+
+        template<typename Itr>
+        Itr operator()(ErrorCode& ec, Itr out, const ReplacePattern& what)
+        {
+            cmd_->matchOne(ec, what, out);
+            return out;
+        }
+
+        private:
+            const CmdTextpp* cmd_;
+    };
+
+    friend class Format;
+
 public:
     CmdTextpp()
         :BaseThis("textpp - textpp file or dir")
     {
         opt_.add_options()
-            ("force,f",  "ignore nonexistent files and arguments")
             ("define,D", bp::value<std::vector<std::string>>(), "define a macro")
         ;
     }
@@ -51,7 +79,6 @@ public:
         const auto& vm=mapGet();
 
         optionDoit();
-        const bool force=vm.count("force") ? true : false;
         auto& files=fileGet();
         files.init(vm);
 
@@ -63,9 +90,7 @@ public:
         {
             if(!file.isExist() || file.isDir())
             {
-                if(force)
-                    continue;
-                stdErr() << file.total << ": not exist or is dir" << std::endl;
+                errorReport() << ": not exist or is dir: " << file.total << std::endl;
                 continue;
             }
 
@@ -122,21 +147,18 @@ private:
         }
     }
 
-    void fileOne(std::istream& strm, OutItr& out) const
+    template<typename Itr>
+    void fileOne(std::istream& strm, Itr& out) const
     {
         ErrorCode ec;
         std::istreambuf_iterator<char> itr(strm);
         std::istreambuf_iterator<char> const end;
-        out=ReplacePattern::replace(ec, out, itr, end,
-            [this](ErrorCode& ec, OutItr out, const ReplacePattern& what) -> OutItr
-            {
-                matchOne(ec, what, out);
-                return out;
-            }
-        );
+        PatternReplace rp;
+        out=rp.replace(ec, out, itr, end, Format(this));
     }
 
-    void matchOne(ErrorCode& ec, const ReplacePattern& match, OutItr& out) const
+    template<typename Itr>
+    void matchOne(ErrorCode& ec, const ReplacePattern& match, Itr& out) const
     {
         for(const auto& opt: match.operatorsGet())
         {
@@ -156,7 +178,8 @@ private:
         }
     }
 
-    void macroReplace(const ReplacePattern::Operator& opt, OutItr& out) const
+    template<typename Itr>
+    void macroReplace(const ReplacePattern::Operator& opt, Itr& out) const
     {
         for(const auto& param: opt.params)
         {
@@ -170,7 +193,8 @@ private:
         }
     }
 
-    void includeReplace(const ReplacePattern::Operator& opt, OutItr& out) const
+    template<typename Itr>
+    void includeReplace(const ReplacePattern::Operator& opt, Itr& out) const
     {
         for(const auto& param: opt.params)
         {
