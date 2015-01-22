@@ -19,6 +19,7 @@
 #pragma once
 
 #include<stack>
+#include<boost/variant.hpp>
 #include<boost/xpressive/xpressive.hpp>
 #include<boost/algorithm/string/trim.hpp>
 
@@ -84,6 +85,83 @@ public:
 private:
     bool needSplit_=false;
     std::vector<Operator> operators_;
+};
+
+class ReplaceNode
+{
+public:
+    enum Type
+    {
+        eNode,
+        eList,
+        eValue,
+        eLiteral,
+    };
+
+    typedef boost::variant<std::string, std::shared_ptr<ReplaceNode>> ParamValue;
+    struct Param
+    {
+        Type type;
+        ParamValue value;
+    };
+
+    template<typename Itr>
+    void complie(ErrorCode& ec, Itr b, Itr const e)
+    {
+        assert(*b=='$' && *(b+1)=='{');
+
+        //${~@opt}
+        for(;;)
+        {
+            switch(*b)
+            {
+
+            }
+        }
+    }
+
+    struct Operator
+    {
+        std::string name;
+        std::vector<Param> params;
+    };
+
+    const std::vector<Operator>& operatorsGet() const
+    {
+        return operators_;
+    }
+
+    void reset()
+    {
+        modifier_=0;
+        operators_.clear();
+    }
+
+    int modifierGet() const
+    {
+        return modifier_;
+    }
+
+private:
+    int modifier_=0;
+    std::vector<Operator> operators_;
+};
+
+class ReplaceBlock
+{
+    class Unit: boost::variant<std::string, ReplaceNode>
+    {
+        typedef boost::variant<std::string, ReplaceNode> BaseThis;
+    public:
+        template<typename... Args>
+        Unit(Args&&... args)
+            :BaseThis(std::forward<Args&&>(args)...)
+        {}
+    };
+public:
+
+private:
+    std::vector<Unit> units_;
 };
 
 //实现一个递归的模式替换过程

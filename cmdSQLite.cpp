@@ -20,9 +20,9 @@
 #include<vector>
 #include<fstream>
 #include<sstream>
+#include<core/encode.hpp>
 #include<SQLiteCpp/SQLiteCpp.h>
 
-#include"encode.hpp"
 #include"option.hpp"
 #include"fileset.hpp"
 
@@ -102,7 +102,7 @@ private:
     void eleSave(bool dir, const Path& path, const Path& base)
     {
         //目录统一使用UTF8保存
-        const auto& str=WCharConverter::to(noBase_==false ? path.string() : FileUnit::sub(path, base).string());
+        const auto& str=core::WCharConverter::to(noBase_==false ? path.string() : FileUnit::sub(path, base).string());
         query_->bind(1, static_cast<const void*>(str.c_str()), str.size());
 
         if(dir)

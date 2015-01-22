@@ -19,9 +19,9 @@
 #include<vector>
 #include<string>
 #include<clocale>
+#include<core/encode.hpp>
 #include<core/server.hpp>
 
-#include"encode.hpp"
 #include"option.hpp"
 #include"parser.hpp"
 

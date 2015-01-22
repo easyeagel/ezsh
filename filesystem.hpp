@@ -21,7 +21,7 @@
 #include<boost/filesystem.hpp>
 #include<boost/filesystem/fstream.hpp>
 
-#include"encode.hpp"
+#include<core/encode.hpp>
 
 namespace ezsh
 {
@@ -43,7 +43,7 @@ namespace details
 
         static bf::path doit(const std::wstring& s)
         {
-            return bf::path(ezsh::WCharConverter::to(s));
+            return bf::path(core::WCharConverter::to(s));
         }
     };
 
@@ -52,7 +52,7 @@ namespace details
     {
         static bf::path doit(const std::string& s)
         {
-            return bf::path(ezsh::WCharConverter::from(s));
+            return bf::path(core::WCharConverter::from(s));
         }
 
         static bf::path doit(const std::wstring& s)

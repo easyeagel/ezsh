@@ -146,7 +146,7 @@ Path Environment::pathFile(const Path& file) const
         boost::system::error_code ec;
         const auto st=bf::status(path, ec);
         if(!ec && st.type()!=bf::file_type::file_not_found)
-			return std::move(WCharConverter::to(path.native()));
+			return std::move(core::WCharConverter::to(path.native()));
     }
 
     return Path();

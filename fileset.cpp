@@ -23,10 +23,10 @@
 #include<deque>
 #include<locale>
 #include<algorithm>
+#include<core/encode.hpp>
 #include<boost/algorithm/string/predicate.hpp>
 
 #include"glob.hpp"
-#include"encode.hpp"
 
 namespace ezsh
 {
@@ -247,7 +247,7 @@ void FileSet::init(const bp::variables_map& vm)
         auto const& t=itr->second.as<std::vector<std::string>>();
         includes_.reserve(t.size());
         for(const auto& r: t )
-            includes_.emplace_back(WCharConverter::from(r));
+            includes_.emplace_back(core::WCharConverter::from(r));
     }
 
     itr =vm.find("fsExclude");
@@ -256,7 +256,7 @@ void FileSet::init(const bp::variables_map& vm)
         auto const& t=itr->second.as<std::vector<std::string>>();
         includes_.reserve(t.size());
         for(const auto& r: t )
-            excludes_.emplace_back(WCharConverter::from(r));
+            excludes_.emplace_back(core::WCharConverter::from(r));
     }
 
     for(const auto& file: files_)
@@ -273,7 +273,7 @@ bool FileSet::isRight(const FileUnit& fu) const
 	if (!globNot_.empty() || !glob_.empty())
 	{
 		const auto& file = fu.self.has_parent_path() ? fu.self.filename() : fu.self.path();
-		const auto& utf8File = WCharConverter::to(file.native());
+		const auto& utf8File = core::WCharConverter::to(file.native());
 
 		for (const auto& g : glob_)
 		{
@@ -292,7 +292,7 @@ bool FileSet::isRight(const FileUnit& fu) const
     //------------------------------------------------------------------
 	if (!includes_.empty() || !excludes_.empty())
 	{
-		const auto& wpath = WCharConverter::from(fu.self.native());
+		const auto& wpath = core::WCharConverter::from(fu.self.native());
 
 		for (const auto& reg : includes_)
 		{

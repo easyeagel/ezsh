@@ -86,21 +86,21 @@ public:
     StdStream& operator<<(char c)
     {
         if(quiet_==false)
-            wstrm_ << WCharConverter::from(c);
+            wstrm_ << core::WCharConverter::from(c);
         return *this;
     }
 
     StdStream& operator<<(const char* str)
     {
         if(quiet_==false)
-            wstrm_ << WCharConverter::from(str);
+            wstrm_ << core::WCharConverter::from(str);
         return *this;
     }
 
     StdStream& operator<<(const std::string& str)
     {
         if(quiet_==false)
-            wstrm_ << WCharConverter::from(str);
+            wstrm_ << core::WCharConverter::from(str);
         return *this;
     }
 
@@ -114,7 +114,7 @@ public:
     StdStream& operator<<(const Path& path)
     {
         if(quiet_==false)
-            wstrm_ << WCharConverter::from(path.native());
+            wstrm_ << core::WCharConverter::from(path.native());
         return *this;
     }
 

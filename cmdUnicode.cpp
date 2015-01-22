@@ -17,10 +17,10 @@
 //
 
 #include<utf8.h>
+#include<core/encode.hpp>
 #include<functional>
 #include<boost/filesystem/fstream.hpp>
 
-#include"encode.hpp"
 #include"option.hpp"
 #include"fileset.hpp"
 
@@ -85,7 +85,7 @@ private:
             return;
 
         stdOut()
-            << WCharConverter::to(file.total.string())
+            << core::WCharConverter::to(file.total.string())
             << (result.second ? ": valid" : ": invalid") << std::endl;
     }
 
