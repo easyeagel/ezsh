@@ -251,7 +251,7 @@ private:
         for(size_t i=1; i<cl.size(); ++i)
         {
             cmd += L'"';
-            cmd += WCharConverter::from(cl[i]);
+            cmd += core::WCharConverter::from(cl[i]);
             cmd += L"\" ";
         }
 

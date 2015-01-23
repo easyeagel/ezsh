@@ -97,9 +97,9 @@ Environment::Environment()
         auto const equ=std::find(str, strend, L'=');
         if(equ==strend || equ==str)
             continue;
-		std::string key = WCharConverter::to(std::wstring(str, equ));
+		std::string key = core::WCharConverter::to(std::wstring(str, equ));
 		boost::algorithm::to_lower(key);
-		maps_[key] = WCharConverter::to(std::wstring(equ + 1, strend));
+		maps_[key] = core::WCharConverter::to(std::wstring(equ + 1, strend));
     }
 
     if(maps_.empty())

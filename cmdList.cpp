@@ -33,6 +33,9 @@ public:
     CmdList()
         :BaseThis("list - list file or dir")
     {
+        opt_.add_options()
+            ("details", "show details info")
+        ;
     }
 
     static const char* nameGet()
@@ -44,6 +47,8 @@ public:
     {
         auto& files=fileGet();
         const auto& vm=mapGet();
+
+        details_=(vm.count("details")>0);
 
         files.init(vm);
         files.loop([this](const FileUnit& u)
@@ -64,15 +69,28 @@ private:
             return;
         }
 
+        if(details_==false)
+        {
+            stdOut() << u.total << std::endl;
+            return;
+        }
+
         std::tm tm;
 #ifndef _MSC_VER
         ::localtime_r(&u.ctime, &tm);
 #else
         ::localtime_s(&tm, &u.ctime);
 #endif
-        stdOut() << tm << " " << u.total << std::endl;
+
+        stdOut()
+            << tm << ' '
+            << std::right << std::setfill(L' ') << std::setw(12) << u.size << ' '
+            << u.total << std::endl;
     }
 
+private:
+    //时间，尺寸，
+    bool details_=false;
 };
 
 namespace

@@ -83,7 +83,7 @@ int wmain(int argc, const wchar_t* argv[])
 
     std::vector<std::string> args;
     for(int i=0; i<argc; ++i)
-		args.emplace_back(ezsh::WCharConverter::to(argv[i], std::wcslen(argv[i])));
+		args.emplace_back(core::WCharConverter::to(argv[i], std::wcslen(argv[i])));
 
     std::vector<char*> argData;
     for(const auto& arg: args)
