@@ -127,6 +127,8 @@ public:
                 if(static_cast<size_t>(itr.level())>=recursive_)
                 {
                     itr.pop();
+                    if(itr==end)
+                        return;
                     continue;
                 }
 

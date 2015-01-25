@@ -133,11 +133,11 @@ public:
         return errorAtt_>=eErrorBreak;
     }
 
-    void init(const ContextSPtr& context) override
+    void init(const ContextSPtr& context) override;
+
+    const bp::options_description& baseOptionGet() const
     {
-        TaskBase::init(context);
-        if(errorAtt_<=eErrorQuiet)
-            stdErr().quietSet();
+        return baseOpt_;
     }
 
 private:
@@ -153,6 +153,7 @@ protected:
 
 protected:
     static bool dry_;
+    bp::options_description baseOpt_;
 };
 
 namespace details
@@ -232,7 +233,10 @@ public:
     void taskDoit()
     {
         if(Base::dry_==false)
-            return objGet().doit();
+        {
+            objGet().doit();
+            return this->contextGet()->commandFinish();
+        }
 
         //简单打印，不执行操作
         return objGet().doDry();

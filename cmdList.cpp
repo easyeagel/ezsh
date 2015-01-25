@@ -84,7 +84,7 @@ private:
 
         stdOut()
             << tm << ' '
-            << std::right << std::setfill(L' ') << std::setw(12) << u.size << ' '
+            << std::right << std::setw(12) << u.size << ' '
             << u.total << std::endl;
     }
 

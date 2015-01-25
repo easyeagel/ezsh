@@ -28,14 +28,20 @@ namespace ezsh
 bool CmdBase::dry_=false;
 
 CmdBase::CmdBase(const char* msg, bool ne)
-    :opt_(msg)
+    :opt_(msg), baseOpt_("option for all command")
 {
     if(ne)
         return;
 
-    opt_.add_options()
+    baseOpt_.add_options()
         ("error", bp::value<int>()->default_value(eErrorReport),
              "error attitude:\n0: ignore, 1: quiet, 2: report, 3: break")
+
+        ("stdIn",    bp::value<std::string>(), "stdin will redirect to file or context")
+        ("stdOut",   bp::value<std::string>(), "stdout will write to file or context")
+        ("stdError", bp::value<std::string>(), "stderr will write to file or context")
+        ("stdOutAppend",   bp::value<std::string>(), "stdout will append to file or context")
+        ("stdErrorAppend", bp::value<std::string>(), "stderr will append to file or context")
     ;
 }
 
@@ -54,29 +60,121 @@ void CmdBase::parse(StrCommandLine&& cl)
 
     const auto cmd=cmdlineMake(cl);
     bp::command_line_parser parser(cmd.size(), cmd.data());
-    if(optComponents.options().empty())
-    {
-        parser.options(opt_);
-    } else {
-        optAll_.add(opt_);
-        optAll_.add(optComponents);
-        parser.options(optAll_);
-    }
+
+    optAll_.add(opt_);
+    optAll_.add(baseOpt_);
+    optAll_.add(optComponents);
+    parser.options(optAll_);
+
     parser.positional(optPos_);
     parser.style(bp::command_line_style::default_style);
 
     bp::store(parser.run(), vm_);
     bp::notify(vm_);
 
-    errorAtt_=static_cast<ErrorAttitude_t>(vm_["error"].as<int>());
-    if(errorAtt_<eErrorIgnore || errorAtt_>eErrorBreak)
-        errorAtt_=eErrorReport;
-
     for(auto& call: afterParseCalls_)
         call(vm_);
 }
 
+static void stdRedirect(CmdBase& cmd, StdStream& stdStrm, Context& ctx, const std::string& out, bool app=false)
+{
+    auto const old=stdStrm.get();
+    switch(out[0])
+    {
+        case '+':
+        {
+            std::shared_ptr<std::wostringstream> ptr(new std::wostringstream);
+            stdStrm.set(ptr.get());
+            ctx.commandFinishCall([ptr, old, out, &stdStrm](Context& ctx) mutable
+                {
+                    VarList var;
+                    std::string line;
+                    std::istringstream strm(core::WCharConverter::to(ptr->str()));
+                    while(std::getline(strm, line))
+                        var.emplace_back(line);
+                    ctx.set(out.substr(1), VarSPtr(new Variable(std::move(var))));
+                    stdStrm.set(old);
+                }
+            );
+            break;
+        }
+        case '*':
+        {
+            std::shared_ptr<std::wostringstream> ptr(new std::wostringstream);
+            stdStrm.set(ptr.get());
+            ctx.commandFinishCall([ptr, old, out, &stdStrm](Context& ctx) mutable
+                {
+                    ctx.set(out.substr(1), VarSPtr(new Variable(core::WCharConverter::to(ptr->str()))));
+                    stdStrm.set(old);
+                }
+            );
+            break;
+        }
+        default:
+        {
+            const auto mode=std::ios_base::out
+                | (app ? std::ios_base::app : std::ios_base::trunc);
+            std::shared_ptr<bf::wofstream> ptr(new bf::wofstream(Path(out).path(), mode));
+            if(!*ptr)
+            {
+                cmd.errorSet(EzshError::ecMake(EzshError::eParamInvalid));
+                cmd.stdErr() << "open file failed: " << out << std::endl;
+                return;
+            }
 
+            core::utf8Enable(*ptr);
+            stdStrm.set(ptr.get());
+            ctx.commandFinishCall([ptr, old, out, &stdStrm](Context& ) mutable
+                {
+                    ptr->close();
+                    stdStrm.set(old);
+                }
+            );
+            break;
+        }
+    }
+}
+
+void CmdBase::init(const ContextSPtr& context)
+{
+    TaskBase::init(context);
+
+    errorAtt_=static_cast<ErrorAttitude_t>(vm_["error"].as<int>());
+    if(errorAtt_<eErrorIgnore || errorAtt_>eErrorBreak)
+        errorAtt_=eErrorReport;
+
+    if(errorAtt_<=eErrorQuiet)
+        stdErr().quietSet();
+
+    auto itr=vm_.find("stdOut");
+    if(itr!=vm_.end())
+    {
+        const auto& out=itr->second.as<std::string>();
+        stdRedirect(*this, context->stdOut(), *context, out);
+    }
+
+    itr=vm_.find("stdError");
+    if(itr!=vm_.end())
+    {
+        const auto& out=itr->second.as<std::string>();
+        stdRedirect(*this, context->stdErr(), *context, out);
+    }
+
+    itr=vm_.find("stdOutAppend");
+    if(itr!=vm_.end())
+    {
+        const auto& out=itr->second.as<std::string>();
+        stdRedirect(*this, context->stdOut(), *context, out, true);
+    }
+
+    itr=vm_.find("stdErrorAppend");
+    if(itr!=vm_.end())
+    {
+        const auto& out=itr->second.as<std::string>();
+        stdRedirect(*this, context->stdErr(), *context, out, true);
+    }
+
+}
 
 Environment::Environment()
 {
@@ -181,6 +279,8 @@ public:
     {
         std::cerr <<
             "ezsh command [options]\n\n";
+
+        std::cerr << baseOpt_ << std::endl;
 
         const auto& vm=mapGet();
         const auto itr=vm.find("cmd");

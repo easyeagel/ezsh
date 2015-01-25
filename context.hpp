@@ -72,49 +72,63 @@ class StdStream
 {
 public:
     StdStream(std::wostream& w)
+        :wstrm_(&w)
+    {}
+
+    StdStream(std::wostream* w)
         :wstrm_(w)
     {}
+
+    std::wostream* get() const
+    {
+        return wstrm_;
+    }
+
+    void set(std::wostream* w)
+    {
+        wstrm_=w;
+    }
 
     template<typename Value>
     StdStream& operator<<(const Value& val)
     {
         if(quiet_==false)
-            wstrm_ << val;
+            *wstrm_ << val;
         return *this;
     }
 
     StdStream& operator<<(char c)
     {
         if(quiet_==false)
-            wstrm_ << core::WCharConverter::from(c);
+            *wstrm_ << core::WCharConverter::from(c);
         return *this;
     }
 
     StdStream& operator<<(const char* str)
     {
         if(quiet_==false)
-            wstrm_ << core::WCharConverter::from(str);
+            *wstrm_ << core::WCharConverter::from(str);
         return *this;
     }
 
     StdStream& operator<<(const std::string& str)
     {
         if(quiet_==false)
-            wstrm_ << core::WCharConverter::from(str);
+            *wstrm_ << core::WCharConverter::from(str);
         return *this;
     }
 
     StdStream& operator<<( std::wostream& (*func)(std::wostream&) )
     {
         if(quiet_==false)
-            wstrm_ << func;
+            *wstrm_ << func;
         return *this;
     }
 
     StdStream& operator<<(const Path& path)
     {
         if(quiet_==false)
-            wstrm_ << core::WCharConverter::from(path.native());
+            *wstrm_ << core::WCharConverter::from(path.native());
         return *this;
     }
 
@@ -137,7 +151,7 @@ public:
 
 private:
     bool quiet_=false;
-    std::wostream& wstrm_;
+    std::wostream* wstrm_;
 };
 
 class StdOutStream: public StdStream
@@ -166,6 +180,8 @@ class Context: public std::enable_shared_from_this<Context>
     {}
 
 public:
+    typedef std::function<void (Context& ctx)> ContextCall;
+
     const ContextSPtr& frontGet() const
     {
         return front_;
@@ -222,6 +238,19 @@ public:
         return coroutine_.start(std::forward<Args&&>(args)...);
     }
 
+    template<typename Call>
+    void commandFinishCall(Call&& call)
+    {
+        commandFinishCall_.emplace_back(std::move(call));
+    }
+
+    void commandFinish()
+    {
+        for(auto& call: commandFinishCall_)
+            call(*this);
+        commandFinishCall_.clear();
+    }
+
 private:
     ContextSPtr front_;
     std::map<std::string, VarSPtr> vars_;
@@ -230,6 +259,8 @@ private:
     StdErrStream stdErr_;
 
     core::CoroutineContext coroutine_;
+
+    std::list<ContextCall> commandFinishCall_;
 };
 
 class ContextStack
