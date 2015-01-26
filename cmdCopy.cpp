@@ -29,7 +29,11 @@ class CmdCopy:public CmdBaseT<CmdCopy, FileSetCmdBase<OutPutCmdBase<>>>
 public:
     CmdCopy()
         :BaseThis("copy - copy file or dir")
-    {}
+    {
+        opt_.add_options()
+            ("force", "force overwrite if file exist")
+        ;
+    }
 
     static const char* nameGet()
     {
@@ -39,6 +43,8 @@ public:
     void doit()
     {
         const auto& vm=mapGet();
+
+        force_ = (vm.count("force")>0);
 
         auto& files=fileGet();
         files.init(vm);
@@ -78,7 +84,30 @@ private:
         }
 
         boost::system::error_code ec;
-        bf::copy(in.total, out.total, ec);
+        switch(in.status.type())
+        {
+            case bf::file_type::directory_file:
+            {
+                if(out.isDir())
+                    break;
+                bf::copy_directory(in.total, out.total, ec);
+                break;
+            }
+            case bf::file_type::regular_file:
+            {
+                if(force_)
+                    bf::copy_file(in.total, out.total, bf::copy_option::overwrite_if_exists, ec);
+                else
+                    bf::copy_file(in.total, out.total, ec);
+                break;
+            }
+            default:
+            {
+                bf::copy(in.total, out.total, ec);
+                break;
+            }
+        }
+
         if(ec)
         {
             errorSet(EzshError::ecMake(EzshError::eOperationFailed));
@@ -88,6 +117,9 @@ private:
 
         in.doneSet();
     }
+
+private:
+    bool force_=false;
 };
 
 namespace
