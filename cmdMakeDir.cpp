@@ -48,7 +48,7 @@ public:
         const auto& dirs=vm["dir"].as<std::vector<std::string>>();
         for(const auto& dir: dirs)
         {
-            boost::system::error_code ec;
+            ErrorCode ec;
             if(parents)
             {
                 bf::create_directories(Path(dir).path(), ec);

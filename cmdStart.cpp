@@ -159,7 +159,7 @@ private:
                 for(const auto& file: files)
                 {
                     Path path(file);
-                    boost::system::error_code ec;
+                    ErrorCode ec;
                     const auto st=bf::status(file, ec);
                     if(u.cond(st)==false)
                         return false;

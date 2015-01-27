@@ -83,7 +83,7 @@ private:
             return;
         }
 
-        boost::system::error_code ec;
+        ErrorCode ec;
         switch(in.status.type())
         {
             case bf::file_type::directory_file:

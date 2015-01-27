@@ -39,7 +39,7 @@ FileUnit::FileUnit(const Path& selfIn, const Path& baseIn, bool scanedIn)
 
 void FileUnit::refresh()
 {
-    boost::system::error_code ec;
+    ErrorCode ec;
     status=bf::status(total, ec);
     if(status.type()==bf::file_type::file_not_found)
         return;

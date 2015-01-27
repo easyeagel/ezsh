@@ -155,7 +155,7 @@ private:
             return std::make_pair(false, false);
         }
 
-        boost::system::error_code ec;
+        ErrorCode ec;
         if(file.isDir())
         {
             stdErr() << file.total << ": isDir" << std::endl;
