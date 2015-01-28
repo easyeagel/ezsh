@@ -231,7 +231,8 @@ typedef std::function<std::unique_ptr<TaskBase>(const GroupCommand::BodySet& , c
 struct CommandGroupTrait
 {
     enum Type_t{eNone, eHead, eMiddle, eTail};
-    typedef std::function<Type_t (const std::string& )> TypeCheck;
+    typedef std::vector<int> CheckStatus;
+    typedef std::function<Type_t (CheckStatus& status, const std::string& cmd)> TypeCheck;
 
     std::string head;
     TypeCheck typeCheck;

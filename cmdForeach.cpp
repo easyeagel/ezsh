@@ -146,7 +146,7 @@ public:
         : BaseThis(b, e)
     {}
 
-    static CommandGroupTrait::Type_t typeCheck(const std::string& str)
+    static CommandGroupTrait::Type_t typeCheck(CommandGroupTrait::CheckStatus& , const std::string& str)
     {
         if(str==GroupHeadForeach::nameGet())
             return CommandGroupTrait::eHead;

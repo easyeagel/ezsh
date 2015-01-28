@@ -100,7 +100,7 @@ add_subdirectory(core/sqlite)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #===============================================================================================
 set(ezshSrc
-    cmdCopy.cpp cmdMakeDir.cpp
+    cmdIfElse.cpp cmdCopy.cpp cmdMakeDir.cpp
     cmdTextpp.cpp cmdContext.cpp cmdScript.cpp cmdStart.cpp cmdUnicode.cpp
     cmdList.cpp cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp
     output.cpp parser.cpp error.cpp
