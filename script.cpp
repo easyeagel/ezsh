@@ -79,15 +79,23 @@ void ScriptCommand::init(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd
         ec=cmd.ecGet();
 }
 
-GroupCommand::GroupCommand(ScriptCommand&& h, ScriptCommand&& t, Script&& b, const CommandGroupTraitSPtr& tt)
-    : head_(std::move(h)), tail_(std::move(t))
-    , body_(std::shared_ptr<Script>(new Script(std::move(b))))
-    , trait_(tt)
+GroupCommand::GroupCommand(const CommandGroupTraitSPtr& tt)
+    :trait_(tt)
 {}
+
+void GroupCommand::tailSet(ScriptCommand&& t)
+{
+    tail_=std::move(t);
+}
+
+void GroupCommand::bodyPush(ScriptCommand&& h, Script&& s)
+{
+    body_.emplace_back(Body{std::move(h), std::shared_ptr<const Script>(new Script(std::move(s)))});
+}
 
 void GroupCommand::execute(ErrorCode& ec, const ContextSPtr& context) const
 {
-    auto const ptr=trait_->create(head_, *body_, tail_);
+    auto const ptr=trait_->create(body_, tail_);
     ptr->init(context);
 
     if(ptr->bad())
@@ -177,11 +185,19 @@ public:
             return true;
         }
 
-        //找到结束命令
-        if(traitGroup_ && traitGroup_->typeCheck(unit_.cmdGet())==CommandGroupTrait::eTail)
+        if(traitGroup_)
         {
-            toBreak_=true;
-            return true;
+            const auto type=traitGroup_->typeCheck(unit_.cmdGet());
+            switch(type)
+            {
+                //找到结束命令
+                case CommandGroupTrait::eTail:
+                case CommandGroupTrait::eMiddle:
+                    toBreak_=true;
+                    return true;
+                default:
+                    break;
+            }
         }
 
         return groupLoad(ctx, spt);
@@ -202,24 +218,36 @@ public:
             return false;
         }
 
-        Script group;
+        Script script;
         ScriptLoad sl(u);
+        GroupCommand group(u);
         sl.line_=std::move(line_);
-        if(sl.load(ctx, group)==false)
+        if(sl.load(ctx, script)==false)
             return false;
 
-        if(sl.unit_.empty() || u->typeCheck(sl.unit_.cmdGet())!=CommandGroupTrait::eTail)
+        if(sl.unit_.empty())
         {
             ctx.messageSet("unclosed group: " + u->head);
             return false;
         }
 
-        spt.push(GroupCommand(std::move(unit_), std::move(sl.unit_), std::move(group), u));
-        unit_.reset();
-        if(!sl.line_.empty())
-            unit_.lineAppend(sl.line_);
-
-        return true;
+        const auto type=u->typeCheck(sl.unit_.cmdGet());
+        switch(type)
+        {
+            case CommandGroupTrait::eTail:
+            {
+                group.bodyPush(std::move(unit_), std::move(script));
+                group.tailSet(std::move(std::move(sl.unit_)));
+                spt.push(std::move(group));
+                unit_.reset();
+                if(!sl.line_.empty())
+                    unit_.lineAppend(sl.line_);
+                return true;
+            }
+            default:
+                ctx.messageSet("unclosed group: " + u->head);
+                return false;
+        }
     }
 
 private:

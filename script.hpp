@@ -146,9 +146,88 @@ private:
 };
 
 class Script;
-class ScriptCommand;
-typedef std::function<std::unique_ptr<TaskBase>(const ScriptCommand&, const Script&, const ScriptCommand& )> CommandGroupCreate;
+struct CommandGroupTrait;
+typedef std::shared_ptr<CommandGroupTrait> CommandGroupTraitSPtr;
 
+class ScriptCommand
+{
+public:
+    bool tokenize();
+
+    void lineAppend(const std::string& s)
+    {
+        if(!line_.empty())
+            line_ += ' ';
+        line_ += s;
+    }
+
+    const StrCommandLine& cmdlineGet() const
+    {
+        return args_;
+    }
+
+    const std::string& cmdGet() const
+    {
+        return args_[0];
+    }
+
+    bool empty() const
+    {
+        return line_.empty();
+    }
+
+    const CmdTraitSPtr& traitGet() const
+    {
+        return trait_;
+    }
+
+    void traitSet(const CmdTraitSPtr& t)
+    {
+        trait_=t;
+    }
+
+	void reset()
+	{
+		line_.clear();
+		trait_.reset();
+		args_.clear();
+	}
+
+    void init(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const;
+
+    void execute(ErrorCode& ec, const ContextSPtr& context) const;
+    void execute(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const;
+
+private:
+    std::string line_;
+    CmdTraitSPtr trait_;
+    StrCommandLine args_;
+};
+
+class GroupCommand
+{
+public:
+    struct Body
+    {
+        ScriptCommand head;
+        std::shared_ptr<const Script> script;
+    };
+    typedef std::vector<Body> BodySet;
+
+    GroupCommand(const CommandGroupTraitSPtr& tt);
+
+    void bodyPush(ScriptCommand&& h, Script&& s);
+    void tailSet(ScriptCommand&& t);
+
+    void execute(ErrorCode& ec, const ContextSPtr& context) const;
+
+private:
+    BodySet body_;
+    ScriptCommand tail_;
+    CommandGroupTraitSPtr trait_;
+};
+
+typedef std::function<std::unique_ptr<TaskBase>(const GroupCommand::BodySet& , const ScriptCommand& )> CommandGroupCreate;
 struct CommandGroupTrait
 {
     enum Type_t{eNone, eHead, eMiddle, eTail};
@@ -158,7 +237,6 @@ struct CommandGroupTrait
     TypeCheck typeCheck;
     CommandGroupCreate create;
 };
-typedef std::shared_ptr<CommandGroupTrait> CommandGroupTraitSPtr;
 
 class ScriptLoadContext
 {
@@ -221,74 +299,6 @@ private:
     std::stack<Unit> stack_;
 };
 
-class ScriptCommand
-{
-public:
-    bool tokenize();
-
-    void lineAppend(const std::string& s)
-    {
-        if(!line_.empty())
-            line_ += ' ';
-        line_ += s;
-    }
-
-    const StrCommandLine& cmdlineGet() const
-    {
-        return args_;
-    }
-
-    const std::string& cmdGet() const
-    {
-        return args_[0];
-    }
-
-    bool empty() const
-    {
-        return line_.empty();
-    }
-
-    const CmdTraitSPtr& traitGet() const
-    {
-        return trait_;
-    }
-
-    void traitSet(const CmdTraitSPtr& t)
-    {
-        trait_=t;
-    }
-
-	void reset()
-	{
-		line_.clear();
-		trait_.reset();
-		args_.clear();
-	}
-
-    void init(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const;
-
-    void execute(ErrorCode& ec, const ContextSPtr& context) const;
-    void execute(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const;
-
-private:
-    std::string line_;
-    CmdTraitSPtr trait_;
-    StrCommandLine args_;
-};
-
-class GroupCommand
-{
-public:
-    GroupCommand(ScriptCommand&& h, ScriptCommand&& t, Script&& b, const CommandGroupTraitSPtr& tt);
-    void execute(ErrorCode& ec, const ContextSPtr& context) const;
-
-private:
-    ScriptCommand head_;
-    ScriptCommand tail_;
-    std::shared_ptr<const Script> body_;
-    CommandGroupTraitSPtr trait_;
-};
-
 class Script
 {
     class Unit: public boost::variant<ScriptCommand, GroupCommand>
@@ -341,55 +351,13 @@ class CommandGroupT: public Base
 
     typedef Base BaseThis;
 public:
-    CommandGroupT(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
-        :scHead_(b), script_(s), scTail_(e)
+    CommandGroupT(const GroupCommand::BodySet& body, const ScriptCommand& e)
+        :scBody_(body), scTail_(e)
     {}
 
-    void taskDoit()
+    static std::unique_ptr<TaskBase> create(const GroupCommand::BodySet& body, const ScriptCommand& tail)
     {
-        head_.oldContextSet(this->contextGet());
-
-        tail_.oldContextSet(this->contextGet());
-
-        auto ctx=this->contextGet()->alloc();
-
-        scHead_.init(this->ecGet(), ctx, head_);
-        if(this->bad())
-            return;
-
-        scTail_.init(this->ecGet(), ctx, tail_);
-        if(this->bad())
-            return;
-
-        for(;;)
-        {
-            head_.taskDoit();
-            if(head_.bad())
-            {
-                if(head_.ecGet()==EzshError::ecMake(EzshError::eGroupDone))
-                    break;
-                this->ecSet(head_.ecGet());
-                return;
-            }
-
-            scriptGet().execute(this->ecGet(), ctx);
-            if(this->bad())
-                return;
-        }
-
-        tail_.taskDoit();
-        if(tail_.bad())
-            this->ecSet(tail_.ecGet());
-    }
-
-    static std::unique_ptr<TaskBase> create(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
-    {
-        return std::unique_ptr<TaskBase>(new Obj(b, s, e));
-    }
-
-    const Script& scriptGet() const
-    {
-        return script_;
+        return std::unique_ptr<TaskBase>(new Obj(body, tail));
     }
 
     static const char* headGet()
@@ -402,14 +370,9 @@ public:
         return Tail::nameGet();
     }
 
-private:
-    const ScriptCommand& scHead_;
-    const Script& script_;
-    const ScriptCommand& scTail_;
-
 protected:
-    Head head_;
-    Tail tail_;
+    const GroupCommand::BodySet& scBody_;
+    const ScriptCommand& scTail_;
 };
 
 class CommandGroupDict
