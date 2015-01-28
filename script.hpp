@@ -151,12 +151,75 @@ typedef std::function<std::unique_ptr<TaskBase>(const ScriptCommand&, const Scri
 
 struct CommandGroupTrait
 {
+    enum Type_t{eNone, eHead, eMiddle, eTail};
+    typedef std::function<Type_t (const std::string& )> TypeCheck;
+
     std::string head;
-    std::string tail;
+    TypeCheck typeCheck;
     CommandGroupCreate create;
 };
 typedef std::shared_ptr<CommandGroupTrait> CommandGroupTraitSPtr;
 
+class ScriptLoadContext
+{
+public:
+    struct Unit
+    {
+        Unit(const std::string& f)
+            :file(f), lineNumber(0), stream(new bf::ifstream(Path(f).path()))
+        {}
+
+        Unit(Unit&& u)
+            : file(std::move(u.file))
+            , lineNumber(u.lineNumber)
+            , stream(std::move(u.stream))
+        {}
+
+        std::string file;
+        size_t lineNumber;
+        std::unique_ptr<bf::ifstream> stream;
+    };
+
+    void push(const std::string& f)
+    {
+        stack_.push(Unit(f));
+    }
+
+    bool getline(std::string& line)
+    {
+        auto& u=stack_.top();
+        std::getline(*u.stream, line);
+        const bool ret=static_cast<bool>(*u.stream);
+        if(ret)
+            u.lineNumber += 1;
+        return ret;
+    }
+
+    bool good() const
+    {
+        return static_cast<bool>(*stack_.top().stream);
+    }
+
+    bool bad() const
+    {
+        return !good();
+    }
+
+    void messageSet(const std::string& msg)
+    {
+        message_=msg;
+    }
+
+    const std::string messageGet() const
+    {
+        auto& u=stack_.top();
+        return u.file + ":" + std::to_string(u.lineNumber) + ":" + message_;
+    }
+
+private:
+    std::string message_;
+    std::stack<Unit> stack_;
+};
 
 class ScriptCommand
 {
@@ -250,7 +313,7 @@ public:
         :script_(std::move(s))
     {}
 
-    static bool load(std::istream& strm, Script& spt);
+    static bool load(ScriptLoadContext& ctx, Script& spt);
 
     void push(Unit&& u)
     {
@@ -370,9 +433,9 @@ public:
         return itr->second;
     }
 
-    void insert(const std::string& b, const std::string& e, CommandGroupCreate&& c)
+    void insert(const std::string& b, CommandGroupTrait::TypeCheck&& check, CommandGroupCreate&& c)
     {
-        dict_[b]=CommandGroupTraitSPtr(new CommandGroupTrait{b, e, std::move(c)});
+        dict_[b]=CommandGroupTraitSPtr(new CommandGroupTrait{b, std::move(check), std::move(c)});
     }
 
 private:
@@ -385,7 +448,7 @@ struct CommandGroupRegister
     CommandGroupRegister()
     {
         auto& d=const_cast<CommandGroupDict&>(CommandGroupDict::instance());
-        d.insert(G::headGet(), G::tailGet(), &G::create);
+        d.insert(G::headGet(), &G::typeCheck, &G::create);
     }
 };
 

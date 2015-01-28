@@ -108,11 +108,11 @@ class ScriptLoad
 {
 public:
     ScriptLoad()=default;
-    ScriptLoad(const std::string& end)
-        :end_(end)
+    ScriptLoad(const CommandGroupTraitSPtr& trait)
+        :traitGroup_(trait)
     {}
 
-    bool load(std::istream& strm, Script& spt)
+    bool load(ScriptLoadContext& ctx, Script& spt)
     {
         for(;;)
         {
@@ -120,16 +120,16 @@ public:
             {
                 firstLine_=false;
                 if(line_.empty())
-                    std::getline(strm, line_);
+                    ctx.getline(line_);
             } else {
-                std::getline(strm, line_);
+                ctx.getline(line_);
             }
 
-            if(!strm)
+            if(ctx.bad())
             {
                 if(unit_.empty())
                     break;
-                return unitDoit(strm, spt);
+                return unitDoit(ctx, spt);
             }
 
             boost::trim(line_);
@@ -143,7 +143,7 @@ public:
                 unit_.lineAppend(line_);
                 continue;
             } else {
-                if(unitDoit(strm, spt)==false)
+                if(unitDoit(ctx, spt)==false)
                     return false;
                 if(toBreak_)
                     break;
@@ -153,10 +153,13 @@ public:
         return true;
     }
 
-    bool unitDoit(std::istream& strm, Script& spt)
+    bool unitDoit(ScriptLoadContext& ctx, Script& spt)
     {
         if(unit_.tokenize()==false)
+        {
+            ctx.messageSet("cmline tokenize failed");
             return false;
+        }
 
         auto trait=CmdDict::find(unit_.cmdGet());
         if(trait!=nullptr)
@@ -167,7 +170,7 @@ public:
             unit_.reset(); //MSVC 没有正确实现移到构造
 
             //或达到文件结尾
-            if(!strm)
+            if(ctx.bad())
                 toBreak_=true;
 
             unit_.lineAppend(line_);
@@ -175,13 +178,13 @@ public:
         }
 
         //找到结束命令
-        if(unit_.cmdGet()==end_)
+        if(traitGroup_ && traitGroup_->typeCheck(unit_.cmdGet())==CommandGroupTrait::eTail)
         {
             toBreak_=true;
             return true;
         }
 
-        return groupLoad(strm, spt);
+        return groupLoad(ctx, spt);
     }
 
     const std::string& lastLineGet() const
@@ -189,18 +192,27 @@ public:
         return line_;
     }
 
-    bool groupLoad(std::istream& strm, Script& spt)
+    bool groupLoad(ScriptLoadContext& ctx, Script& spt)
     {
         const auto& gd=CommandGroupDict::instance();
         auto const u=gd.find(unit_.cmdGet());
         if(u==nullptr)
+        {
+            ctx.messageSet("unkown command: " + unit_.cmdGet());
             return false;
+        }
 
         Script group;
-        ScriptLoad sl(u->tail);
+        ScriptLoad sl(u);
         sl.line_=std::move(line_);
-        if(sl.load(strm, group)==false)
+        if(sl.load(ctx, group)==false)
             return false;
+
+        if(sl.unit_.empty() || u->typeCheck(sl.unit_.cmdGet())!=CommandGroupTrait::eTail)
+        {
+            ctx.messageSet("unclosed group: " + u->head);
+            return false;
+        }
 
         spt.push(GroupCommand(std::move(unit_), std::move(sl.unit_), std::move(group), u));
         unit_.reset();
@@ -213,15 +225,15 @@ public:
 private:
     bool firstLine_=true;
     bool toBreak_=false;
-    std::string end_;
     std::string line_;
     ScriptCommand unit_;
+    CommandGroupTraitSPtr traitGroup_;
 };
 
-bool Script::load(std::istream& strm, Script& spt)
+bool Script::load(ScriptLoadContext& ctx, Script& spt)
 {
     ScriptLoad sl;
-    return sl.load(strm, spt);
+    return sl.load(ctx, spt);
 }
 
 void Script::execute(ErrorCode& ec, const ContextSPtr& context) const

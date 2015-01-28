@@ -145,6 +145,15 @@ public:
     CmdForeach(const ScriptCommand& b, const Script& s, const ScriptCommand& e)
         : BaseThis(b, s, e)
     {}
+
+    static CommandGroupTrait::Type_t typeCheck(const std::string& str)
+    {
+        if(str==GroupHeadForeach::nameGet())
+            return CommandGroupTrait::eHead;
+        if(str==GroupTailForeach::nameGet())
+            return CommandGroupTrait::eTail;
+        return CommandGroupTrait::eNone;
+    }
 };
 
 namespace

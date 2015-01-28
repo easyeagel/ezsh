@@ -21,6 +21,8 @@
 #include<fstream>
 #include<sstream>
 #include<core/encode.hpp>
+
+#define SQLITE_HAS_CODEC
 #include<SQLiteCpp/SQLiteCpp.h>
 
 #include"option.hpp"
@@ -54,6 +56,11 @@ public:
     void noBaseSet(bool v=true)
     {
         noBase_=v;
+    }
+
+    void encryptKeySet(const std::string& key)
+    {
+        sqlite_->setEncryptKey(key);
     }
 
     void save()
@@ -152,9 +159,10 @@ public:
     {
         opt_.add_options()
             ("noBase", "no base")
-            ("db",     bp::value<std::string>()->required(), "sqlite database")
-            ("table",  bp::value<std::string>(), "table name of sqlite database")
-            ("file,f", bp::value<std::vector<std::string>>()->required(), "file or dir to import")
+            ("db",       bp::value<std::string>()->required(), "sqlite database")
+            ("table",    bp::value<std::string>(), "table name of sqlite database")
+            ("file,f",   bp::value<std::vector<std::string>>()->required(), "file or dir to import")
+            ("password", bp::value<std::string>(), "password for encrypt")
         ;
         optPos_.add("file", -1);
     }
@@ -177,6 +185,10 @@ public:
             sp.init(db, files);
         else
             sp.init(db, vm["table"].as<std::string>(), files);
+
+        auto itr=vm.find("password");
+        if(itr!=vm.end())
+            sp.encryptKeySet(itr->second.as<std::string>());
 
         sp.save();
     }

@@ -47,8 +47,6 @@ public:
             ("fileExistNot", bp::value<std::vector<std::string>>(), "start exec, if this file not exist")
             ("dirExist",     bp::value<std::vector<std::string>>(), "start exec, if this dir exist")
             ("dirExistNot",  bp::value<std::vector<std::string>>(), "start exec, if this dir not exist")
-
-            ("stdOut",  bp::value<std::string>(), "pipe stdout to this file")
         ;
     }
 

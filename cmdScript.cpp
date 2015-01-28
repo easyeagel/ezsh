@@ -76,14 +76,16 @@ public:
         {
             scripts_.emplace_back();
             auto& s=scripts_.back();
-            bf::ifstream strm(Path(file).path());
-            if(!strm)
+
+            ScriptLoadContext ctx;
+            ctx.push(file);
+            if(!ctx.good())
                 continue;
 
-            const auto ok=Script::load(strm, s);
+            const auto ok=Script::load(ctx, s);
             if(ok==false)
             {
-                stdErr() << file << ": load failed" << std::endl;
+                stdErr() << ctx.messageGet() << std::endl;
                 return ecSet(EzshError::ecMake(EzshError::eParamInvalid));
             }
         }
