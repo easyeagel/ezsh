@@ -103,7 +103,7 @@ set(ezshSrc
     cmdIfElse.cpp cmdCopy.cpp cmdMakeDir.cpp
     cmdTextpp.cpp cmdContext.cpp cmdScript.cpp cmdStart.cpp cmdUnicode.cpp
     cmdList.cpp cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp
-    output.cpp parser.cpp error.cpp
+    output.cpp parser.cpp error.cpp optionPredication.cpp
     ezsh.cpp option.cpp context.cpp fileset.cpp glob.cpp script.cpp
 )
 

@@ -27,8 +27,6 @@
 namespace ezsh
 {
 
-namespace bf=boost::filesystem;
-
 struct FileUnit
 {
     FileUnit()=default;

@@ -156,5 +156,10 @@ void OutPut::rewrite(const FileUnit& src, FileUnit& dest, bool dirCreate) const
 
 }
 
+namespace
+{
+    static ezsh::OptionRegisterT<ezsh::OutPut> gsOptionOutPut;
+}
+
 }
 

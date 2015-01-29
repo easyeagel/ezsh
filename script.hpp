@@ -416,10 +416,10 @@ struct CommandGroupRegister
     }
 };
 
-template<typename Obj>
-class GroupPointBaseT: public CmdBaseT<Obj>
+template<typename Obj, typename Base=CmdBase>
+class GroupPointBaseT: public CmdBaseT<Obj, Base>
 {
-    typedef CmdBaseT<Obj> BaseThis;
+    typedef CmdBaseT<Obj, Base> BaseThis;
 public:
     GroupPointBaseT(const char* msg)
         :BaseThis(msg)

@@ -18,45 +18,22 @@
 
 #include"option.hpp"
 #include"script.hpp"
+#include"optionPredication.hpp"
 
 namespace ezsh
 {
 
-class GroupHeadIf: public GroupPointBaseT<GroupHeadIf>
+class GroupHeadIf: public GroupPointBaseT<GroupHeadIf, PredicationCmdBase<>>
 {
-    typedef GroupPointBaseT<GroupHeadIf> BaseThis;
+    typedef GroupPointBaseT<GroupHeadIf, PredicationCmdBase<>> BaseThis;
 public:
     GroupHeadIf(const char* msg="if - if group begin")
         :BaseThis(msg)
-    {
-        opt_.add_options()
-            ("fileExist", bp::value<std::vector<std::string>>(), "files exist")
-        ;
-    }
+    {}
 
     void doit()
     {
-        const auto& vm=mapGet();
-        auto itr=vm.find("fileExist");
-        if(itr!=vm.end())
-        {
-            const auto& files=itr->second.as<std::vector<std::string>>();
-            auto const all=std::all_of(files.begin(), files.end(),
-                [](const std::string& f)
-                {
-                    ErrorCode ec;
-                    auto status=bf::status(Path(f).path(), ec);
-                    return status.type()==bf::file_type::regular_file;
-                }
-            );
-
-            if(all==false)
-            {
-                needCall_=false;
-                return;
-            }
-
-        }
+        predicationInit(mapGet());
     }
 
     void doDry()
@@ -72,11 +49,8 @@ public:
 
     bool needCall() const
     {
-        return needCall_;
+        return isPassed();
     }
-
-private:
-    bool needCall_=true;
 };
 
 class GroupHeadElseIf: public GroupHeadIf

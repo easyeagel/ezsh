@@ -335,10 +335,27 @@ public:
 
     void doit()
     {
-        std::cerr << "valid options list: " << std::endl;
-        const auto& opts=OptionDict::dictGet();
+        const auto& vm=mapGet();
+
+        auto itr=vm.find("option");
+        if(itr==vm.end())
+        {
+            std::cerr << "valid options list:\n" << std::endl;
+            const auto& opts=OptionDict::dictGet();
+            for(const auto& opt: opts)
+                opt.second->longHelp(std::cerr);
+            return;
+        }
+
+        auto const& opts=itr->second.as<std::vector<std::string>>();
         for(const auto& opt: opts)
-            opt.second->longHelp(std::cerr);
+        {
+            const auto& ptr=OptionDict::find(opt);
+            if(ptr)
+                ptr->longHelp(std::cerr);
+            else
+                std::cerr << "unkown option: " << opt << "\n" << std::endl;
+        }
     }
 };
 
