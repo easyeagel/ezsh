@@ -19,8 +19,8 @@
 #pragma once
 
 #include"option.hpp"
-#include"fileset.hpp"
 #include"filesystem.hpp"
+#include"optionFileSet.hpp"
 
 namespace ezsh
 {

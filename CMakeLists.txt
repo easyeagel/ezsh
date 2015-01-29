@@ -70,14 +70,13 @@ else(MSVC)
     set(CppWarningFlags "/wd4800")
     set(ExeLinkFlags    "/SAFESEH:NO")
 endif()
+
+set(CoreDir ${CMAKE_SOURCE_DIR}/core)
 include_directories(SYSTEM
+    ${CoreDir}
+    ${CoreDir}/sqlite
+    ${CoreDir}/webp/src
     ${BoostRoot}/include
-    ${CMAKE_SOURCE_DIR}/core/png
-    ${CMAKE_SOURCE_DIR}/core/zlib
-    ${CMAKE_SOURCE_DIR}/core/jpeg
-    ${CMAKE_SOURCE_DIR}/core/sqlite
-    ${CMAKE_SOURCE_DIR}/core/webp/src
-    ${CMAKE_SOURCE_DIR}/core/utf8
     ${CMAKE_CONFIGURATION_HEADER_DIR}
 )
 include_directories(${CMAKE_SOURCE_DIR})
@@ -89,12 +88,12 @@ set(CMAKE_CXX_FLAGS_DEBUG     "${CMAKE_CXX_FLAGS_DEBUG}   ${CppWarningFlags} ${C
 set(CMAKE_CXX_FLAGS_RELEASE   "${CMAKE_CXX_FLAGS_RELEASE} ${CppWarningFlags} ${CppFlags} ${CppReleaseFlags}")
 set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS}  ${ExeLinkFlags} ")
 
-add_subdirectory(core)
-add_subdirectory(core/zlib)
-add_subdirectory(core/png)
-add_subdirectory(core/jpeg)
-add_subdirectory(core/webp)
-add_subdirectory(core/sqlite)
+add_subdirectory(${CoreDir})
+add_subdirectory(${CoreDir}/zlib)
+add_subdirectory(${CoreDir}/png)
+add_subdirectory(${CoreDir}/jpeg)
+add_subdirectory(${CoreDir}/webp)
+add_subdirectory(${CoreDir}/sqlite)
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -103,8 +102,8 @@ set(ezshSrc
     cmdIfElse.cpp cmdCopy.cpp cmdMakeDir.cpp
     cmdTextpp.cpp cmdContext.cpp cmdScript.cpp cmdStart.cpp cmdUnicode.cpp
     cmdList.cpp cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp
-    output.cpp parser.cpp error.cpp optionPredication.cpp
-    ezsh.cpp option.cpp context.cpp fileset.cpp glob.cpp script.cpp
+    parser.cpp error.cpp ezsh.cpp option.cpp context.cpp glob.cpp script.cpp
+    optionOutPut.cpp optionFileSet.cpp optionPredication.cpp
 )
 
 add_executable(ezsh ${ezshSrc})

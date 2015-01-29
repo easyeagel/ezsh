@@ -16,13 +16,13 @@
 //=====================================================================================
 //
 
-#include<utf8.h>
-#include<core/encode.hpp>
 #include<functional>
+#include<core/encode.hpp>
+#include<core/utf8/utf8.h>
 #include<boost/filesystem/fstream.hpp>
 
 #include"option.hpp"
-#include"fileset.hpp"
+#include"optionFileSet.hpp"
 
 namespace ezsh
 {
