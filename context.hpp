@@ -149,6 +149,16 @@ public:
         quiet_=v;
     }
 
+    void write(const char* b, size_t n)
+    {
+        const auto& tmp=core::WCharConverter::from(b, n);
+        wstrm_->write(tmp.data(), tmp.size());
+    }
+
+    void write(const std::wstring& str)
+    {
+        wstrm_->write(str.data(), str.size());
+    }
 private:
     bool quiet_=false;
     std::wostream* wstrm_;

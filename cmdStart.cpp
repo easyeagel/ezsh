@@ -17,14 +17,18 @@
 //
 
 #ifndef WIN32
-#include<fcntl.h>
-#include<sys/stat.h>
-#include<sys/types.h>
-#include<sys/wait.h>
-#include<unistd.h>
+    #include<fcntl.h>
+    #include<sys/stat.h>
+    #include<sys/types.h>
+    #include<sys/wait.h>
+    #include<unistd.h>
+    #include<boost/asio/posix/stream_descriptor.hpp>
 #else
+    #include<core/msvc.hpp>
+    #include<boost/asio/windows/stream_handle.hpp>
 #endif //WIN32
 
+#include<core/pipe.hpp>
 #include<boost/algorithm/string/predicate.hpp>
 
 #include"option.hpp"
@@ -40,6 +44,8 @@ class CmdStart: public CmdBaseT<CmdStart, PredicationCmdBase<>>
 public:
     CmdStart()
         :BaseThis("start - start a program")
+        ,stdOutStream_(core::MainServer::get())
+        ,stdErrStream_(core::MainServer::get())
     {}
 
     void parse(StrCommandLine&& cl) override
@@ -80,11 +86,6 @@ public:
         if(check()==false)
             return ecSet(EzshError::ecMake(EzshError::eParamInvalid));
 
-        const auto& vm=mapGet();
-        auto itr=vm.find("stdOut");
-        if(itr!=vm.end())
-            stdOut_=itr->second.as<std::string>();
-
         const size_t count=cmdLines_.size();
         for(size_t i=1; i<count; ++i)
         {
@@ -94,7 +95,7 @@ public:
             const auto& path=exeFind(exec);
             if(path.empty())
             {
-				start(exec, cmd);
+                start(exec, cmd);
                 stdErr() << exec << ": not exist or not executable" << std::endl;
                 return ecSet(EzshError::ecMake(EzshError::eParamInvalid));
             }
@@ -130,20 +131,20 @@ private:
             return file;
 
 #ifdef WIN32
-		std::vector<Path> adjustFile;
-		const auto& ext = file.extension();
-		if (ext == "exe" || ext == "bat" || ext == "cmd")
-		{
-			adjustFile.emplace_back(file);
-		} else {
-			adjustFile.emplace_back(Path(file).concat(".exe"));
-			adjustFile.emplace_back(Path(file).concat(".bat"));
-			adjustFile.emplace_back(Path(file).concat(".cmd"));
-		}
+        std::vector<Path> adjustFile;
+        const auto& ext = file.extension();
+        if (ext == "exe" || ext == "bat" || ext == "cmd")
+        {
+            adjustFile.emplace_back(file);
+        } else {
+            adjustFile.emplace_back(Path(file).concat(".exe"));
+            adjustFile.emplace_back(Path(file).concat(".bat"));
+            adjustFile.emplace_back(Path(file).concat(".cmd"));
+        }
 #else
-		std::vector<Path> adjustFile = { file };
+        std::vector<Path> adjustFile = { file };
 #endif //WIN32
-		const auto& env = Environment::instance();
+        const auto& env = Environment::instance();
         for(const auto& p: adjustFile)
         {
             auto const path=env.pathFile(p);
@@ -159,44 +160,32 @@ private:
     }
 
 #ifdef WIN32
+    typedef boost::asio::windows::stream_handle Stream;
     void stdIOReset(::STARTUPINFOW& info)
     {
-		info.dwFlags |= STARTF_USESTDHANDLES;
+        info.dwFlags |= STARTF_USESTDHANDLES;
 
-		handleReset(stdIn_, ::GetStdHandle(STD_INPUT_HANDLE), info.hStdInput);
-		handleReset(stdOut_, ::GetStdHandle(STD_OUTPUT_HANDLE), info.hStdOutput);
-		handleReset(stdErr_, ::GetStdHandle(STD_ERROR_HANDLE),  info.hStdError);
+        handleReset(::GetStdHandle(STD_INPUT_HANDLE), info.hStdInput);
+
+        info.hStdOutput=stdOut_->writeGet();
+        info.hStdError=stdErr_->writeGet();
     }
 
-    void handleReset(const std::string& file, HANDLE src, HANDLE& dest)
+    void handleReset(HANDLE src, HANDLE& dest)
     {
-		if (file.empty())
-		{
-			HANDLE out = INVALID_HANDLE_VALUE;
-			auto const prc = ::GetCurrentProcess();
-			::DuplicateHandle(prc, src, prc, &out, 0, true, DUPLICATE_SAME_ACCESS);
-			dest = out;
-			return;
-		}
-
-        Path path(file);
-        path.make_preferred();
-        ::SECURITY_ATTRIBUTES att;
-        std::memset(&att, 0, sizeof(att));
-        att.nLength = sizeof(att);
-        att.bInheritHandle = true;
-        auto handle=::CreateFileW(path.native().c_str(),
-            GENERIC_WRITE, FILE_SHARE_READ, &att,
-            OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr
-        );
-
-		dest = handle;
+        HANDLE out = INVALID_HANDLE_VALUE;
+        auto const prc = ::GetCurrentProcess();
+        ::DuplicateHandle(prc, src, prc, &out, 0, true, DUPLICATE_SAME_ACCESS);
+        dest = out;
     }
 
     int start(const Path& exe, const CmdLine& cl)
     {
-		Path path(exe);
-		path.make_preferred();
+        stdOut_.reset(new core::Pipe());
+        stdErr_.reset(new core::Pipe());
+
+        Path path(exe);
+        path.make_preferred();
 
         std::wstring cmd;
         cmd += L'"';
@@ -209,56 +198,60 @@ private:
             cmd += L"\" ";
         }
 
-		::STARTUPINFOW si;
-		::PROCESS_INFORMATION pi;
+        ::STARTUPINFOW si;
+        ::PROCESS_INFORMATION pi;
 
-		std::memset(&si, 0, sizeof(si));
-		si.cb = sizeof(si);
-		std::memset(&pi, 0, sizeof(pi) );
+        std::memset(&si, 0, sizeof(si));
+        si.cb = sizeof(si);
+        std::memset(&pi, 0, sizeof(pi) );
 
         stdIOReset(si);
 
-		if (!::CreateProcessW(nullptr,
-			const_cast<wchar_t*>(cmd.data()),        // Command line
-			nullptr,           // Process handle not inheritable
-			nullptr,           // Thread handle not inheritable
-			true,          // Set handle inheritance to true
-			0,              // No creation flags
-			nullptr,           // Use parent's environment block
-			nullptr,           // Use parent's starting directory 
-			&si,            // Pointer to STARTUPINFO structure
-			&pi )           // Pointer to PROCESS_INFORMATION structure
-		) 
-		{
-			stdErr() << cmd << ": CreateProcess failed: " << ::GetLastError() << std::endl;
-			return -1;
-		}
+        if (!::CreateProcessW(nullptr,
+            const_cast<wchar_t*>(cmd.data()),        // Command line
+            nullptr,           // Process handle not inheritable
+            nullptr,           // Thread handle not inheritable
+            true,          // Set handle inheritance to true
+            0,              // No creation flags
+            nullptr,           // Use parent's environment block
+            nullptr,           // Use parent's starting directory 
+            &si,            // Pointer to STARTUPINFO structure
+            &pi )           // Pointer to PROCESS_INFORMATION structure
+        ) 
+        {
+            stdErr() << cmd << ": CreateProcess failed: " << ::GetLastError() << std::endl;
+            return -1;
+        }
 
-		// Wait until child process exits.
-		::WaitForSingleObject(pi.hProcess, INFINITE);
+        stdIOParent();
 
-		// Close process and thread handles. 
-		::CloseHandle(pi.hProcess);
-		::CloseHandle(pi.hThread);
-		if (si.hStdOutput)
-			::CloseHandle(si.hStdOutput);
-		if (si.hStdError)
-			::CloseHandle(si.hStdError);
-		if(si.hStdInput)
-			::CloseHandle(si.hStdInput);
-		return 0;
+        // Wait until child process exits.
+        ::WaitForSingleObject(pi.hProcess, INFINITE);
+
+        // Close process and thread handles. 
+        ::CloseHandle(pi.hProcess);
+        ::CloseHandle(pi.hThread);
+        return 0;
     }
 #else
-    void stdIOReset()
+    typedef boost::asio::posix::stream_descriptor Stream;
+    void stdIOChild()
     {
-        if(stdOut_.empty())
-            return;
-        int const fd=::open(stdOut_.c_str(), O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR);
-        ::dup2(fd, STDOUT_FILENO);
+        //::dup2(stdIn_.readGet(), STDIN_FILENO);
+        //stdIn_.writeClose();
+
+        ::dup2(stdOut_->writeGet(), STDOUT_FILENO);
+        stdOut_->readClose();
+
+        ::dup2(stdErr_->writeGet(), STDERR_FILENO);
+        stdErr_->readClose();
     }
 
     int start(const Path& exe, const CmdLine& cl)
     {
+        stdOut_.reset(new core::Pipe());
+        stdErr_.reset(new core::Pipe());
+
         auto cmd=cmdlineMake(cl);
         cmd.push_back(nullptr);
         const auto pid=::fork();
@@ -266,7 +259,7 @@ private:
         {
             case 0://child
             {
-                stdIOReset();
+                stdIOChild();
                 ::execv(exe.c_str(), cmd.data());
                 ::perror("execv");
                 ::exit(EXIT_FAILURE);
@@ -278,6 +271,7 @@ private:
             }
             default:
             {
+                stdIOParent();
                 int status=0;
                 ::waitpid(pid, &status, 0);
                 return status;
@@ -286,10 +280,71 @@ private:
     }
 
 #endif //__MSC_VER
+
+    void stdIOParent()
+    {
+        //关闭不需要的端口
+        //stdIn_.readClose();
+        stdOut_->writeClose();
+        stdErr_->writeClose();
+
+        //暂停当前协程，并异步转发数据
+        contextGet()->yield([this]()
+            {
+                this->stdIOTransfer();
+            }
+        );
+    }
+
+    void stdIOTransfer()
+    {
+        //当前对象可能执行多个本地命令
+        streamCount_ = 2;
+
+        if (stdOutStream_.is_open())
+            stdOutStream_.close();
+        stdOutStream_.assign(stdOut_->readReleaseGet());
+        stdOutBuffer_.resize(4*1024);
+        stdRead(stdOutStream_, stdOutBuffer_, stdOut());
+
+        if (stdErrStream_.is_open())
+            stdErrStream_.close();
+        stdErrStream_.assign(stdErr_->readReleaseGet());
+        stdErrBuffer_.resize(4*1024);
+        stdRead(stdErrStream_, stdErrBuffer_, stdErr());
+    }
+
+    void stdRead(Stream& strm, std::vector<char>& buf, StdStream& out)
+    {
+        strm.async_read_some(boost::asio::buffer(buf),
+            [this, &strm, &out, &buf](const boost::system::error_code& ec, std::size_t nb)
+            {
+                if(ec)
+                {
+                    if(--streamCount_==0)
+                        contextGet()->resume();
+                    return;
+                }
+
+                out.write(core::mbstowcs(buf.data(), nb));
+                stdRead(strm, buf, out);
+            }
+        );
+    }
+
 private:
-    std::string stdIn_;
-    std::string stdOut_;
-    std::string stdErr_;
+    //core::Pipe stdIn_;
+    std::unique_ptr<core::Pipe> stdOut_;
+    std::unique_ptr<core::Pipe> stdErr_;
+
+    int streamCount_=2;
+
+    Stream stdOutStream_;
+    std::vector<char> stdOutBuffer_;
+
+    Stream stdErrStream_;
+    std::vector<char> stdErrBuffer_;
+
     std::vector<CmdLine> cmdLines_;
 };
 
@@ -299,5 +354,4 @@ namespace
 }
 
 }
-
 

@@ -153,54 +153,12 @@ public:
     void taskDoit()
     {
         tail_.oldContextSet(this->contextGet());
-
         auto ctx=this->contextGet()->alloc();
-
-        auto itr=scBody_.begin();
-        auto const end=scBody_.end();
-
-        assert(itr!=end);
-        
-        //循环处理可能的 if elseif
-        for(;; ++itr)
-        {
-            if(itr==end)
-                break;
-
-            const auto& sc=itr->head;
-            if(sc.cmdGet()==GroupHeadIf::nameGet())
+        contextGet()->yield([this, &ctx]()
             {
-                auto const called=call<GroupHeadIf>(ctx, *itr);
-                if(this->bad())
-                    return;
-                if(called)
-                    break;
-                continue;
-            } else if(sc.cmdGet()==GroupHeadElseIf::nameGet()) {
-                auto const called=call<GroupHeadElseIf>(ctx, *itr);
-                if(this->bad())
-                    return;
-                if(called)
-                    break;
-                continue;
-            } else {
-                assert(sc.cmdGet()==GroupHeadElse::nameGet());
-                auto const called=call<GroupHeadElse>(ctx, *itr);
-                if(this->bad())
-                    return;
-                if(called)
-                    break;
-                continue;
+                this->contextStart(ctx);
             }
-        }
-
-        scTail_.init(this->ecGet(), ctx, tail_);
-        if(this->bad())
-            return;
-
-        tail_.taskDoit();
-        if(tail_.bad())
-            this->ecSet(tail_.ecGet());
+        );
     }
 
     template<typename Cmd>
@@ -225,6 +183,60 @@ public:
         const auto& script=*body.script;
         script.execute(this->ecGet(), ctx);
         return true;
+    }
+
+private:
+    void contextStart(const ContextSPtr& ctx)
+    {
+        ctx->start([this, &ctx]()
+            {
+                auto itr=scBody_.begin();
+                auto const end=scBody_.end();
+
+                assert(itr!=end);
+                
+                //循环处理可能的 if elseif
+                for(;; ++itr)
+                {
+                    if(itr==end)
+                        break;
+
+                    const auto& sc=itr->head;
+                    if(sc.cmdGet()==GroupHeadIf::nameGet())
+                    {
+                        auto const called=call<GroupHeadIf>(ctx, *itr);
+                        if(this->bad())
+                            return;
+                        if(called)
+                            break;
+                        continue;
+                    } else if(sc.cmdGet()==GroupHeadElseIf::nameGet()) {
+                        auto const called=call<GroupHeadElseIf>(ctx, *itr);
+                        if(this->bad())
+                            return;
+                        if(called)
+                            break;
+                        continue;
+                    } else {
+                        assert(sc.cmdGet()==GroupHeadElse::nameGet());
+                        auto const called=call<GroupHeadElse>(ctx, *itr);
+                        if(this->bad())
+                            return;
+                        if(called)
+                            break;
+                        continue;
+                    }
+                }
+
+                scTail_.init(this->ecGet(), ctx, tail_);
+                if(this->bad())
+                    return;
+
+                tail_.taskDoit();
+                if(tail_.bad())
+                    this->ecSet(tail_.ecGet());
+            }
+        );
     }
 
 private:

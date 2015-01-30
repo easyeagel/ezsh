@@ -161,40 +161,59 @@ public:
         tail_.oldContextSet(this->contextGet());
 
         auto ctx=this->contextGet()->alloc();
-
-        auto& scHead=scBody_.back().head;
-        scHead.init(this->ecGet(), ctx, head_);
-        if(this->bad())
-            return;
-
-        scTail_.init(this->ecGet(), ctx, tail_);
-        if(this->bad())
-            return;
-
-        for(;;)
-        {
-            head_.taskDoit();
-            if(head_.bad())
+        this->contextGet()->yield([this, &ctx]()
             {
-                if(head_.ecGet()==EzshError::ecMake(EzshError::eGroupDone))
-                    break;
-                this->ecSet(head_.ecGet());
-                return;
+                this->contextStart(ctx);
             }
-
-            scriptGet().execute(this->ecGet(), ctx);
-            if(this->bad())
-                return;
-        }
-
-        tail_.taskDoit();
-        if(tail_.bad())
-            this->ecSet(tail_.ecGet());
+        );
     }
 
     const Script& scriptGet() const
     {
         return *scBody_.back().script;
+    }
+
+private:
+    void contextStart(const ContextSPtr& ctx)
+    {
+        ctx->start([this, &ctx]()
+            {
+                auto& scHead=scBody_.back().head;
+                scHead.init(this->ecGet(), ctx, head_);
+                if(this->bad())
+                    return;
+
+                scTail_.init(this->ecGet(), ctx, tail_);
+                if(this->bad())
+                    return;
+
+                for(;;)
+                {
+                    head_.taskDoit();
+                    if(head_.bad())
+                    {
+                        if(head_.ecGet()==EzshError::ecMake(EzshError::eGroupDone))
+                            break;
+                        this->ecSet(head_.ecGet());
+                        return;
+                    }
+
+                    scriptGet().execute(this->ecGet(), ctx);
+                    if(this->bad())
+                        return;
+                }
+
+                tail_.taskDoit();
+                if(tail_.bad())
+                    this->ecSet(tail_.ecGet());
+
+                core::MainServer::post([this]()
+                    {
+                        this->contextGet()->resume();
+                    }
+                );
+            }
+        );
     }
 
 private:

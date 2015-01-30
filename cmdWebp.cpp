@@ -91,8 +91,8 @@ private:
         //task可能在this结束后再运行
         auto task=[this, out, in]() mutable
         {
-			auto const outPath = out.total.native();
-			auto const inPath = in.total.native();
+            auto const outPath = out.total.native();
+            auto const inPath = in.total.native();
             auto const quality=std::to_string(quality_);
             auto const alphaQuality=std::to_string(alphaQuality_);
             const char* cmdt[] =
