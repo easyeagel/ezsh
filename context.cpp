@@ -196,19 +196,15 @@ VarSPtr Context::get(const std::string& name) const
 
 std::string Context::stringGet(const std::string& name) const
 {
+    return stringGet(name, std::string());
+}
+
+void Context::setif(const std::string& name, const VarSPtr& val)
+{
     auto ptr=get(name);
-    if(!ptr)
-        return std::string();
-
-    auto const strVal=boost::get<VarString>(ptr.get());
-    if(strVal!=nullptr)
-        return *strVal;
-
-    auto const listVal=boost::get<VarList>(ptr.get());
-    if(listVal->empty())
-        return std::string();
-
-    return listVal->front();
+    if(ptr)
+        return;
+    set(name, val);
 }
 
 std::string Context::stringGet(const std::string& name, const std::string& def) const
@@ -225,7 +221,83 @@ std::string Context::stringGet(const std::string& name, const std::string& def) 
     if(listVal->empty())
         return def;
 
-    return listVal->front();
+    std::string ret;
+    for(auto& l: *listVal)
+    {
+        ret += l;
+        ret += ' ';
+    }
+
+    ret.resize(ret.size()-1);
+    return std::move(ret);
+}
+
+void ContextVisitor::setDo(const std::vector<std::string>& sets)
+{
+    for(const auto& s: sets)
+    {
+        const auto& p=simpleSplit(s, '=');
+        ctx_.set(p.first, VarSPtr(new Variable(p.second)));
+    }
+}
+
+void ContextVisitor::setIfDo(const std::vector<std::string>& sets)
+{
+    for(const auto& s: sets)
+    {
+        const auto& p=simpleSplit(s, '=');
+        ctx_.setif(p.first, VarSPtr(new Variable(p.second)));
+    }
+}
+
+void ContextVisitor::setListDo(const std::vector<std::string>& sets)
+{
+    for(const auto& s: sets)
+    {
+        const auto& p=simpleSplit(s, '=');
+        VarList list;
+        simpleSplit(p.second, [&list](std::string&& v)
+            {
+                list.emplace_back(std::move(v));
+            }, ',');
+
+        ctx_.set(p.first, VarSPtr(new Variable(list)));
+    }
+}
+
+void ContextVisitor::setIfListDo(const std::vector<std::string>& sets)
+{
+    for(const auto& s: sets)
+    {
+        const auto& p=simpleSplit(s, '=');
+        VarList list;
+        simpleSplit(p.second, [&list](std::string&& v)
+            {
+                list.emplace_back(std::move(v));
+            }, ',');
+
+        ctx_.setif(p.first, VarSPtr(new Variable(list)));
+    }
+}
+
+void ContextVisitor::unsetDo(const std::vector<std::string>& sets)
+{
+    for(const auto& s: sets)
+        ctx_.unset(s);
+}
+
+void ContextVisitor::echoDo(const std::vector<std::string>& echos)
+{
+    if(echos.empty())
+    {
+        ctx_.stdOut() << std::endl;
+        return;
+    }
+
+    const auto size=echos.size()-1;
+    for(size_t i=0; i<size; ++i)
+        ctx_.stdOut() << echos[i] << ' ';
+    ctx_.stdOut() << echos.back() << std::endl;
 }
 
 void Context::cmdlineReplace(ErrorCode& ec, const StrCommandLine& cmd, StrCommandLine& dest) const

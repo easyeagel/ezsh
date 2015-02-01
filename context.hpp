@@ -212,10 +212,26 @@ public:
         vars_[name]=val;
     }
 
+    void setif(const std::string& name, const VarSPtr& val);
+
+    void unset(const std::string& name)
+    {
+        vars_.erase(name);
+    }
+
     template<typename Val>
     void set(const std::string& name, const Val& val)
     {
         vars_[name]=VarSPtr(new Variable(val));
+    }
+
+    template<typename Val>
+    void setif(const std::string& name, const Val& val)
+    {
+        auto ptr=get(name);
+        if(ptr)
+            return;
+        set(name, val);
     }
 
     VarSPtr get(const std::string& name) const;
@@ -271,6 +287,25 @@ private:
     core::CoroutineContext coroutine_;
 
     std::list<ContextCall> commandFinishCall_;
+};
+
+class ContextVisitor
+{
+    ContextVisitor(const ContextVisitor&)=delete;
+public:
+    ContextVisitor(Context& ctx)
+        :ctx_(ctx)
+    {}
+
+    void setDo(const std::vector<std::string>& sets);
+    void setIfDo(const std::vector<std::string>& sets);
+    void setListDo(const std::vector<std::string>& sets);
+    void setIfListDo(const std::vector<std::string>& sets);
+    void unsetDo(const std::vector<std::string>& sets);
+    void echoDo(const std::vector<std::string>& echos);
+
+private:
+    Context& ctx_;
 };
 
 class ContextStack

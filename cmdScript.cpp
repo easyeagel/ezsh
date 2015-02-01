@@ -38,6 +38,7 @@ public:
             ("dry", "dry run for debug")
             ("file,f", bp::value<std::vector<std::string>>()->required(), "files to run")
             ("set",    bp::value<std::vector<std::string>>()->multitoken(), "set var with value")
+            ("list",   bp::value<std::vector<std::string>>()->multitoken(), "set context list var")
         ;
         optPos_.add("file", -1);
     }
@@ -49,7 +50,7 @@ public:
 
     void doit()
     {
-        varSet();
+        contextVisit();
 
         const auto& vm=mapGet();
         if(vm.count("dry")>0)
@@ -99,19 +100,18 @@ public:
     }
 
 private:
-    void varSet()
+    void contextVisit()
     {
         const auto& vm=mapGet();
-        const auto itr=vm.find("set");
-        if(itr==vm.end())
-            return;
+        ContextVisitor visitor(*contextGet());
 
-        const auto& sets=itr->second.as<std::vector<std::string>>();
-        for(const auto& s: sets)
-        {
-            auto const p=simpleSplit(s, '=');
-            contextGet()->set(p.first, p.second);
-        }
+        auto itr=vm.find("set");
+        if(itr!=vm.end())
+            visitor.setDo(itr->second.as<std::vector<std::string>>());
+
+        itr=vm.find("list");
+        if(itr!=vm.end())
+            visitor.setListDo(itr->second.as<std::vector<std::string>>());
     }
 
 private:

@@ -34,8 +34,12 @@ public:
         :BaseThis("context - contrl current context")
     {
         opt_.add_options()
-            ("set",  bp::value<std::vector<std::string>>()->multitoken(), "set context var")
-            ("echo", bp::value<std::vector<std::string>>()->multitoken(), "echo this params")
+            ("set",    bp::value<std::vector<std::string>>()->multitoken(), "set context var")
+            ("unset",  bp::value<std::vector<std::string>>()->multitoken(), "unset this params")
+            ("setif",  bp::value<std::vector<std::string>>()->multitoken(), "set context var, if the var not exist")
+            ("list",   bp::value<std::vector<std::string>>()->multitoken(), "set context list var")
+            ("listif", bp::value<std::vector<std::string>>()->multitoken(), "set context list var, if the var not exist")
+            ("echo",   bp::value<std::vector<std::string>>()->multitoken(), "echo this params")
         ;
     }
 
@@ -47,48 +51,50 @@ public:
     void doit()
     {
         const auto& vm=mapGet();
+
+        ContextVisitor visitor(*contextGet());
         auto itr=vm.find("set");
         if(itr!=vm.end())
-            setDo(itr->second.as<std::vector<std::string>>());
+            visitor.setDo(itr->second.as<std::vector<std::string>>());
+
+        itr=vm.find("setif");
+        if(itr!=vm.end())
+            visitor.setIfDo(itr->second.as<std::vector<std::string>>());
+
+        itr=vm.find("list");
+        if(itr!=vm.end())
+            visitor.setListDo(itr->second.as<std::vector<std::string>>());
+
+        itr=vm.find("listif");
+        if(itr!=vm.end())
+            visitor.setIfListDo(itr->second.as<std::vector<std::string>>());
 
         itr=vm.find("echo");
         if(itr!=vm.end())
-            echoDo(itr->second.as<std::vector<std::string>>());
+            visitor.echoDo(itr->second.as<std::vector<std::string>>());
+
+        itr=vm.find("unset");
+        if(itr!=vm.end())
+            visitor.unsetDo(itr->second.as<std::vector<std::string>>());
     }
 
     void doDry()
     {
         BaseThis::doDry();
 
+        ContextVisitor visitor(*contextGet());
+
         const auto& vm=mapGet();
         auto itr=vm.find("set");
         if(itr!=vm.end())
-            setDo(itr->second.as<std::vector<std::string>>());
+            visitor.setDo(itr->second.as<std::vector<std::string>>());
+
+        itr=vm.find("unset");
+        if(itr!=vm.end())
+            visitor.unsetDo(itr->second.as<std::vector<std::string>>());
     }
 
 private:
-    void setDo(const std::vector<std::string>& sets)
-    {
-        for(const auto& s: sets)
-        {
-            const auto& p=simpleSplit(s, '=');
-            contextGet()->set(p.first, VarSPtr(new Variable(p.second)));
-        }
-    }
-
-    void echoDo(const std::vector<std::string>& echos)
-    {
-        if(echos.empty())
-        {
-            stdOut() << std::endl;
-            return;
-        }
-
-        const auto size=echos.size()-1;
-        for(size_t i=0; i<size; ++i)
-            stdOut() << echos[i] << ' ';
-        stdOut() << echos.back() << std::endl;
-    }
 };
 
 namespace

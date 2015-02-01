@@ -22,6 +22,7 @@
 #include<boost/variant.hpp>
 #include<boost/xpressive/xpressive.hpp>
 #include<boost/algorithm/string/trim.hpp>
+#include<boost/algorithm/string/split.hpp>
 
 #include"error.hpp"
 
@@ -315,6 +316,15 @@ private:
 private:
     std::stack<Unit> stack_;
 };
+
+template<typename Out>
+static inline void simpleSplit(const std::string& str, Out&& out, char del='=')
+{
+    std::vector<std::string> tmp;
+    boost::algorithm::split(tmp, str, [del](char c){return c==del; });
+    for(auto& t: tmp)
+        out(std::move(t));
+}
 
 static inline std::pair<std::string, std::string> simpleSplit(const std::string& str, char del='=')
 {
