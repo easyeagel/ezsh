@@ -57,6 +57,7 @@ public:
 
 private:
     bool isPassed_=false;
+    CmdBase* cmd_=nullptr;
 };
 
 template<typename Base=CmdBase>

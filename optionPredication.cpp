@@ -30,6 +30,7 @@ void Predication::Component::options(bp::options_description& opt, bp::positiona
         ("fileExistNot", bp::value<std::vector<std::string>>(), "retrun true, if this file not exist")
         ("dirExist",     bp::value<std::vector<std::string>>(), "retrun true, if this dir exist")
         ("dirExistNot",  bp::value<std::vector<std::string>>(), "retrun true, if this dir not exist")
+        ("isDefined",    bp::value<std::vector<std::string>>(), "return true, if this vars is defined")
     ;
 }
 
@@ -50,6 +51,7 @@ void Predication::Component::shortHelp(std::ostream& strm)
 void Predication::config(CmdBase& cmd)
 {
     cmd.componentPush(componentGet());
+    cmd_=std::addressof(cmd);
 }
 
 void Predication::init(const bp::variables_map& vm)
@@ -88,6 +90,20 @@ void Predication::init(const bp::variables_map& vm)
                     isPassed_=false;
                     return;
                 }
+            }
+        }
+    }
+
+    auto itr=vm.find("isDefined");
+    if(itr!=vm.end())
+    {
+        const auto& vars=itr->second.as<std::vector<std::string>>();
+        for(const auto& var: vars)
+        {
+            if(cmd_->contextGet()->get(var)==nullptr)
+            {
+                isPassed_=false;
+                return;
             }
         }
     }
