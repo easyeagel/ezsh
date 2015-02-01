@@ -235,6 +235,12 @@ private:
                 tail_.taskDoit();
                 if(tail_.bad())
                     this->ecSet(tail_.ecGet());
+
+                core::MainServer::post([this]()
+                    {
+                        this->contextGet()->resume();
+                    }
+                );
             }
         );
     }
