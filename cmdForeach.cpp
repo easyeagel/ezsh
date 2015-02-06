@@ -100,8 +100,9 @@ public:
 
     void doDry()
     {
-        BaseThis::doDry();
-        return doit();
+        if(done_==false)
+            BaseThis::doDry();
+        doit();
     }
 
     static const char* nameGet()
@@ -181,11 +182,11 @@ private:
                 auto& scHead=scBody_.back().head;
                 scHead.init(this->ecGet(), ctx, head_);
                 if(this->bad())
-                    return;
+                    return contextResum();
 
                 scTail_.init(this->ecGet(), ctx, tail_);
                 if(this->bad())
-                    return;
+                    return contextResum();
 
                 for(;;)
                 {
@@ -195,23 +196,27 @@ private:
                         if(head_.ecGet()==EzshError::ecMake(EzshError::eGroupDone))
                             break;
                         this->ecSet(head_.ecGet());
-                        return;
+                        return contextResum();
                     }
 
                     scriptGet().execute(this->ecGet(), ctx);
                     if(this->bad())
-                        return;
+                        return contextResum();
                 }
 
                 tail_.taskDoit();
                 if(tail_.bad())
                     this->ecSet(tail_.ecGet());
+                return contextResum();
+            }
+        );
+    }
 
-                core::MainServer::post([this]()
-                    {
-                        this->contextGet()->resume();
-                    }
-                );
+    void contextResum()
+    {
+        core::MainServer::post([this]()
+            {
+                this->contextGet()->resume();
             }
         );
     }

@@ -70,11 +70,11 @@ public:
         auto& output=outGet();
         output.init(vm);
 
-        counter_=files.setGet().size();
         contextGet()->yield([&, this]()
             {
                 const auto& o=outGet();
                 const auto& s=fileGet().setGet();
+                counter_ = s.size();
                 for(const auto& u: s)
                 {
                     FileUnit dest;
@@ -91,8 +91,8 @@ private:
         //task可能在this结束后再运行
         auto task=[this, out, in]() mutable
         {
-            auto const outPath = out.total.native();
-            auto const inPath = in.total.native();
+            auto const outPath = const_cast<FileUnit&>(out).total.make_preferred().native();
+            auto const inPath = const_cast<FileUnit&>(in).total.make_preferred().native();
             auto const quality=std::to_string(quality_);
             auto const alphaQuality=std::to_string(alphaQuality_);
             const char* cmdt[] =
@@ -106,11 +106,19 @@ private:
                 reinterpret_cast<const char*>(inPath.c_str()),
             };
 
+            //stdOut() << inPath << std::endl;
+
             std::vector<const char*> cmd(cmdt, cmdt+(sizeof(cmdt)/sizeof(cmdt[0])));
             cwebp_main(cmd.size(), cmd.data());
 
-            if(--counter_==0)
-                contextGet()->resume();
+            if (--counter_ == 0)
+            {
+                core::MainServer::post([this]()
+                    {
+                        this->contextGet()->resume();
+                    }
+                );
+            }
         };
 
         if(concurrency_==false)

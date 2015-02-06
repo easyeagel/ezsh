@@ -55,7 +55,10 @@ void ScriptCommand::execute(ErrorCode& ec, const ContextSPtr& context, CmdBase& 
     init(ec, context, cmd);
     if(ec.bad())
         return;
+
     cmd.taskDoit();
+    if(cmd.bad())
+        ec=cmd.ecGet();
 }
 
 void ScriptCommand::init(ErrorCode& ec, const ContextSPtr& context, CmdBase& cmd) const
@@ -106,10 +109,7 @@ void GroupCommand::execute(ErrorCode& ec, const ContextSPtr& context) const
 
     ptr->taskDoit();
     if(ptr->bad())
-    {
         ec=ptr->ecGet();
-        return ;
-    }
 }
 
 class ScriptLoad
@@ -122,6 +122,7 @@ public:
 
     bool load(ScriptLoadContext& ctx, Script& spt)
     {
+        static const std::string appendChars="-,;{}@+*";
         for(;;)
         {
             if(firstLine_)
@@ -144,7 +145,7 @@ public:
             if(line_.empty() || line_[0]=='#')
             {
                 continue;
-            } else if(line_[0]=='-') {
+            } else if(appendChars.find(line_[0])!=std::string::npos) {
                 unit_.lineAppend(line_);
                 continue;
             } else if(unit_.empty()) {
@@ -288,8 +289,8 @@ void Script::execute(ErrorCode& ec, const ContextSPtr& context) const
         if(sc!=nullptr)
         {
             sc->execute(ec, context);
-            if(ec.bad())
-                return;
+            if(ec.bad()) //脚本执行出错，默认继续执行
+                ec.clear();
             continue;
         }
 
@@ -298,7 +299,7 @@ void Script::execute(ErrorCode& ec, const ContextSPtr& context) const
         {
             cg->execute(ec, context);
             if(ec.bad())
-                return;
+                ec.clear();
             continue;
         }
     }

@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include<set>
 #include<regex>
+#include<vector>
 
 #include"option.hpp"
 #include"filesystem.hpp"
@@ -101,7 +101,7 @@ public:
     {
         scan([this](FileUnit&& u)
             {
-                sets_.insert(std::move(u));
+                sets_.emplace_back(std::move(u));
                 return true;
             }
         );
@@ -120,7 +120,7 @@ public:
                 continue;
 
             typedef bf::recursive_directory_iterator DirItr;
-            for(auto itr=DirItr(file), end=DirItr(); itr!=end; ++itr)
+            for(auto itr=DirItr(fu.total), end=DirItr(); itr!=end; ++itr)
             {
                 if(static_cast<size_t>(itr.level())>=recursive_)
                 {
@@ -130,7 +130,7 @@ public:
                     continue;
                 }
 
-                FileUnit u(FileUnit::sub(itr->path(), file), file, true);
+                FileUnit u(FileUnit::sub(itr->path(), fu.self), fu.self, true);
                 if(!isRight(u))
                     continue;
 
@@ -163,14 +163,14 @@ public:
         return recursive_==eRecursiveDefault;
     }
 
-    std::set<FileUnit>& setGet()
+    std::vector<FileUnit>& setGet()
     {
         return sets_;
     }
 
     bool isRight(const FileUnit& fu) const;
 
-    const std::set<FileUnit>& setGet() const
+    const std::vector<FileUnit>& setGet() const
     {
         return sets_;
     }
@@ -188,7 +188,7 @@ private:
 
 private:
     size_t recursive_=-1;
-    std::set<FileUnit> sets_;
+    std::vector<FileUnit> sets_;
 
     std::vector<std::string> files_;
 

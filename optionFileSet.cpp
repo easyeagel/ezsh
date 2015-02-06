@@ -72,7 +72,7 @@ Path FileUnit::normalize(const Path& path)
         stk.push_back(*itr);
     }
 
-    Path ret;
+    bf::path ret;
     for(auto& p: stk)
         ret /= p;
 
@@ -264,7 +264,7 @@ void FileSet::init(const bp::variables_map& vm)
         FileUnit fu(file);
         if(!isRight(fu))
             continue;
-        sets_.insert(std::move(fu));
+        sets_.emplace_back(std::move(fu));
     }
 }
 

@@ -170,7 +170,7 @@ public:
         if(this->bad())
             return false;
 
-        cmd.doit();
+        cmd.taskDoit();
         if(cmd.bad())
         {
             this->ecSet(cmd.ecGet());
@@ -206,14 +206,14 @@ private:
                     {
                         auto const called=call<GroupHeadIf>(ctx, *itr);
                         if(this->bad())
-                            return;
+                            return contexResum();
                         if(called)
                             break;
                         continue;
                     } else if(sc.cmdGet()==GroupHeadElseIf::nameGet()) {
                         auto const called=call<GroupHeadElseIf>(ctx, *itr);
                         if(this->bad())
-                            return;
+                            return contexResum();
                         if(called)
                             break;
                         continue;
@@ -221,7 +221,7 @@ private:
                         assert(sc.cmdGet()==GroupHeadElse::nameGet());
                         auto const called=call<GroupHeadElse>(ctx, *itr);
                         if(this->bad())
-                            return;
+                            return contexResum();
                         if(called)
                             break;
                         continue;
@@ -230,17 +230,21 @@ private:
 
                 scTail_.init(this->ecGet(), ctx, tail_);
                 if(this->bad())
-                    return;
+                    return contexResum();
 
                 tail_.taskDoit();
                 if(tail_.bad())
                     this->ecSet(tail_.ecGet());
+                return contexResum();
+            }
+        );
+    }
 
-                core::MainServer::post([this]()
-                    {
-                        this->contextGet()->resume();
-                    }
-                );
+    void contexResum()
+    {
+        core::MainServer::post([this]()
+            {
+                this->contextGet()->resume();
             }
         );
     }

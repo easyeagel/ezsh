@@ -89,6 +89,18 @@ public:
         if(itr!=vm.end())
             visitor.setDo(itr->second.as<std::vector<std::string>>());
 
+        itr=vm.find("setif");
+        if(itr!=vm.end())
+            visitor.setIfDo(itr->second.as<std::vector<std::string>>());
+
+        itr=vm.find("list");
+        if(itr!=vm.end())
+            visitor.setListDo(itr->second.as<std::vector<std::string>>());
+
+        itr=vm.find("listif");
+        if(itr!=vm.end())
+            visitor.setIfListDo(itr->second.as<std::vector<std::string>>());
+
         itr=vm.find("unset");
         if(itr!=vm.end())
             visitor.unsetDo(itr->second.as<std::vector<std::string>>());

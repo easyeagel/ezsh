@@ -1,12 +1,12 @@
 ﻿//  Copyright [2015] <lgb (LiuGuangBao)>
 //=====================================================================================
 //
-//      Filename:  cmdCopy.cpp
+//      Filename:  cmdMove.cpp
 //
-//   Description:  复制文件或目录
+//   Description:  移动文件命令
 //
 //       Version:  1.0
-//       Created:  2015年01月18日 09时50分41秒
+//       Created:  2015年02月06日 14时10分33秒
 //      Revision:  none
 //      Compiler:  gcc
 //
@@ -22,13 +22,13 @@
 namespace ezsh
 {
 
-class CmdCopy:public CmdBaseT<CmdCopy, FileSetCmdBase<OutPutCmdBase<>>>
+class CmdMove:public CmdBaseT<CmdMove, FileSetCmdBase<OutPutCmdBase<>>>
 {
-    typedef CmdBaseT<CmdCopy, FileSetCmdBase> BaseThis;
+    typedef CmdBaseT<CmdMove, FileSetCmdBase> BaseThis;
     typedef std::ostreambuf_iterator<char> OutItr;
 public:
-    CmdCopy()
-        :BaseThis("copy - copy file or dir")
+    CmdMove()
+        :BaseThis("move - move file or dir")
     {
         opt_.add_options()
             ("force", "force overwrite if file exist")
@@ -37,7 +37,7 @@ public:
 
     static const char* nameGet()
     {
-        return "copy";
+        return "move";
     }
 
     void doit()
@@ -57,7 +57,7 @@ public:
         size_t count=0;
         for(auto& file: files.setGet())
         {
-            if(file.done || (!file.scaned && file.isDir()))
+            if(file.done)
                 continue;
 
             ++count;
@@ -65,7 +65,7 @@ public:
             fileOne(file, out);
         }
 
-        if(count>0 || force_)
+        if(count>0)
             return;
 
         errorSet(EzshError::ecMake(EzshError::eParamNotExist));
@@ -84,29 +84,7 @@ private:
         }
 
         ErrorCode ec;
-        switch(in.status.type())
-        {
-            case bf::file_type::directory_file:
-            {
-                if(out.isDir())
-                    break;
-                bf::copy_directory(in.total, out.total, ec);
-                break;
-            }
-            case bf::file_type::regular_file:
-            {
-                if(force_)
-                    bf::copy_file(in.total, out.total, bf::copy_option::overwrite_if_exists, ec);
-                else
-                    bf::copy_file(in.total, out.total, ec);
-                break;
-            }
-            default:
-            {
-                bf::copy(in.total, out.total, ec);
-                break;
-            }
-        }
+        bf::rename(in.total, out.total, ec);
 
         if(ec)
         {
@@ -124,7 +102,7 @@ private:
 
 namespace
 {
-static CmdRegisterT<CmdCopy> gsRegister;
+static CmdRegisterT<CmdMove> gsRegister;
 }
 
 
