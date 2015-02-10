@@ -197,8 +197,8 @@ public:
                     toBreak_=true;
                     return true;
                 case CommandGroupTrait::eHead:
-                    ctx.messageSet("command group match error");
-                    return false;
+                    //ctx.messageSet("command group match error");
+                    break;
                 case CommandGroupTrait::eNone:
                     break;
             }
@@ -281,7 +281,7 @@ bool Script::load(ScriptLoadContext& ctx, Script& spt)
     return sl.load(ctx, spt);
 }
 
-void Script::execute(ErrorCode& ec, const ContextSPtr& context) const
+void Script::execute(ErrorCode& ec, bool errorBreak, const ContextSPtr& context) const
 {
     for(auto& ptr: script_)
     {
@@ -290,7 +290,11 @@ void Script::execute(ErrorCode& ec, const ContextSPtr& context) const
         {
             sc->execute(ec, context);
             if(ec.bad()) //脚本执行出错，默认继续执行
+            {
+                if(errorBreak)
+                    return;
                 ec.clear();
+            }
             continue;
         }
 
@@ -299,7 +303,11 @@ void Script::execute(ErrorCode& ec, const ContextSPtr& context) const
         {
             cg->execute(ec, context);
             if(ec.bad())
+            {
+                if(errorBreak)
+                    return;
                 ec.clear();
+            }
             continue;
         }
     }

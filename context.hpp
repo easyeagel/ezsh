@@ -149,6 +149,11 @@ public:
         quiet_=v;
     }
 
+    bool quietGet() const
+    {
+        return quiet_;
+    }
+
     void write(const char* b, size_t n)
     {
         const auto& tmp=core::WCharConverter::from(b, n);

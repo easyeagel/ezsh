@@ -199,7 +199,7 @@ private:
                         return contextResum();
                     }
 
-                    scriptGet().execute(this->ecGet(), ctx);
+                    scriptGet().execute(this->ecGet(), head_.errorBreak(), ctx);
                     if(this->bad())
                         return contextResum();
                 }

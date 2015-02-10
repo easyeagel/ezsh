@@ -331,7 +331,7 @@ public:
         script_.emplace_back(std::move(u));
     }
 
-    void execute(ErrorCode& ec, const ContextSPtr& context) const;
+    void execute(ErrorCode& ec, bool errorBreak, const ContextSPtr& context) const;
 
 private:
     Container script_;

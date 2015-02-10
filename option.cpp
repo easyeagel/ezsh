@@ -143,8 +143,15 @@ void CmdBase::init(const ContextSPtr& context)
     if(errorAtt_<eErrorIgnore || errorAtt_>eErrorBreak)
         errorAtt_=eErrorReport;
 
-    if(errorAtt_<=eErrorQuiet)
+    if(errorAtt_<=eErrorQuiet && stdErr().quietGet()==false)
+    {
         stdErr().quietSet();
+        context->commandFinishCall([](Context& ctx)
+            {
+                ctx.stdErr().quietSet(false);
+            }
+        );
+    }
 
     auto itr=vm_.find("stdOut");
     if(itr!=vm_.end())

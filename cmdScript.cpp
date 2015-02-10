@@ -93,8 +93,8 @@ public:
 
         for(auto& s: scripts_)
         {
-            s.execute(ecGet(), contextGet());
-            if(bad())
+            s.execute(ecGet(), errorBreak(), contextGet());
+            if(bad() && errorBreak())
                 return;
         }
     }

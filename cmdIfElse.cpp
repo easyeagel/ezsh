@@ -181,7 +181,7 @@ public:
             return false;
 
         const auto& script=*body.script;
-        script.execute(this->ecGet(), ctx);
+        script.execute(this->ecGet(), cmd.errorBreak(), ctx);
         return true;
     }
 
