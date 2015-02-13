@@ -35,6 +35,7 @@ public:
     {
         opt_.add_options()
             ("details", "show details info")
+            ("noBase", "not show base dir")
         ;
     }
 
@@ -48,6 +49,7 @@ public:
         auto& files=fileGet();
         const auto& vm=mapGet();
 
+        noBase_ =(vm.count("noBase" )>0);
         details_=(vm.count("details")>0);
 
         files.init(vm);
@@ -71,7 +73,7 @@ private:
 
         if(details_==false)
         {
-            stdOut() << u.total << std::endl;
+            stdOut() << name(u) << std::endl;
             return;
         }
 
@@ -85,11 +87,17 @@ private:
         stdOut()
             << tm << ' '
             << std::right << std::setw(12) << u.size << ' '
-            << u.total << std::endl;
+            << name(u) << std::endl;
+    }
+
+    const Path& name(const FileUnit& u)
+    {
+        return noBase_ ? u.self : u.total;
     }
 
 private:
     //时间，尺寸，
+    bool noBase_=false;
     bool details_=false;
 };
 

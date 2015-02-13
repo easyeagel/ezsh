@@ -66,6 +66,7 @@ public:
     {
         opt_.add_options()
             ("define,D", bp::value<std::vector<std::string>>(), "define a macro")
+            ("defFile,F", bp::value<std::vector<std::string>>(), "define a macro from many files")
         ;
     }
 
@@ -79,6 +80,9 @@ public:
         const auto& vm=mapGet();
 
         optionDoit();
+        if(bad() && errorBreak())
+            return;
+
         auto& files=fileGet();
         files.init(vm);
 
@@ -96,7 +100,13 @@ public:
 
             bf::ifstream strm(file.total.path());
             if(!strm)
+            {
+                errorSet(EzshError::ecMake(EzshError::eParamInvalid));
+                errorReport() << ": open failed: " << file.total << std::endl;
+                if(errorBreak())
+                    return;
                 continue;
+            }
 
             output.rewrite(file, outPath);
             if(outPath.total.empty())
@@ -106,7 +116,13 @@ public:
             } else {
                 bf::ofstream ostrm(outPath.total.path());
                 if(!ostrm)
+                {
+                    errorSet(EzshError::ecMake(EzshError::eParamInvalid));
+                    errorReport() << ": open failed: " << outPath.total << std::endl;
+                    if(errorBreak())
+                        return;
                     continue;
+                }
                 OutItr out(ostrm);
                 fileOne(strm, out);
             }
@@ -122,29 +138,44 @@ private:
         {
             const auto& macros=itr->second.as<std::vector<std::string>>();
             for(const auto& m: macros)
+                lineSplit(m);
+        }
+
+        itr=vm.find("defFile");
+        if(itr!=vm.end())
+        {
+            std::string line;
+            const auto& files=itr->second.as<std::vector<std::string>>();
+            for(const auto& f: files)
             {
-                std::string key, val;
-                auto eq=m.find('=');
-                if(eq==std::string::npos)
+                bf::ifstream strm(Path(f).path());
+                if(!strm)
                 {
-                    key=m;
-                } else {
-                    key=m.substr(0, eq);
-                    val=m.substr(eq+1);
-                }
-
-                boost::trim(key);
-                boost::trim(val);
-
-                if(!xpr::regex_match(key.begin(), key.end(), xpr::gsMacroName))
-                {
-                    stdErr() << "warning:notInvalidMacroName: " << key << std::endl;
+                    errorSet(EzshError::ecMake(EzshError::eParamInvalid));
+                    errorReport() << ": open failed: " << f << std::endl;
+                    if(errorBreak())
+                        return;
                     continue;
                 }
 
-                dict_[key]=val;
+                while(std::getline(strm, line))
+                    lineSplit(line);
             }
         }
+    }
+
+    void lineSplit(const std::string& line)
+    {
+        auto const pair=simpleSplit(line);
+        const auto& key=pair.first;
+        const auto& val=pair.second;
+        if(!xpr::regex_match(key.begin(), key.end(), xpr::gsMacroName))
+        {
+            errorReport() << "warning:notInvalidMacroName: " << key << std::endl;
+            return ;
+        }
+
+        dict_[key]=val;
     }
 
     template<typename Itr>

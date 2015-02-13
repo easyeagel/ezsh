@@ -38,6 +38,10 @@ class OutPut
     enum Mode_t {eModeInplace, eModeDir, eModeDirInto, eModeFile};
 
 public:
+    OutPut()
+        :modeOnly_(true)
+    {}
+
     static OptionComponentSPtr componentGet()
     {
         static OptionComponentSPtr ptr;

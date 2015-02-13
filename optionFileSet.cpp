@@ -88,7 +88,7 @@ Path FileUnit::sub(const Path& path, const Path& base)
     while(count-- && itr!=end)
         ++itr;
 
-    Path ret;
+    bf::path ret;
     for(; itr!=end; ++itr)
         ret /= *itr;
     if(ret.empty())

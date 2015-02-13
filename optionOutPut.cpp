@@ -90,7 +90,10 @@ void OutPut::modeInit(const std::string& str, const bp::variables_map& vm)
 
 void OutPut::init(const bp::variables_map& vm)
 {
-    modeInit(modeOnly_.oneGet(), vm);
+    if(modeOnly_.good())
+        modeInit(modeOnly_.oneGet(), vm);
+    else
+        modeInit("outFile", vm);
 
     extPop_=(vm.count("outExtPop")>0);
 
@@ -143,8 +146,13 @@ void OutPut::rewrite(const FileUnit& src, FileUnit& dest, bool dirCreate) const
             break;
         }
         case eModeFile:
-            dest=FileUnit(modeStr_);
+        {
+            if(modeStr_.empty())
+                dest=FileUnit(self);
+            else
+                dest=FileUnit(modeStr_);
             break;
+        }
     }
 
     if(dirCreate==true)

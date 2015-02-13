@@ -288,6 +288,10 @@ class OptionOneAndOnly
 public:
     OptionOneAndOnly()=default;
 
+    OptionOneAndOnly(bool v)
+        :canIngore_(v)
+    {}
+
     void add(std::initializer_list<std::string> list)
     {
         add(list.begin(), list.end());
@@ -309,6 +313,16 @@ public:
         return *one_;
     }
 
+    bool good() const
+    {
+        return one_!=nullptr;
+    }
+
+    bool bad() const
+    {
+        return !good();
+    }
+
 private:
     void check(const CmdBase::VarMap& vm)
     {
@@ -322,21 +336,32 @@ private:
             one_=std::addressof(opt);
         }
 
-        if(count!=1)
+        if(canIngore_)
         {
-            std::string msg;
-            for(const auto& opt: opts_)
-            {
-                msg += opt;
-                msg += ", ";
-            }
-
-            msg += "need one and only one";
-            throw bp::error(msg);
+            if(count==0 || count==1)
+                return;
+            return error();
         }
+
+        if(count!=1)
+            return error();
+    }
+
+    void error()
+    {
+        std::string msg;
+        for(const auto& opt: opts_)
+        {
+            msg += opt;
+            msg += ", ";
+        }
+
+        msg += "need one and only one";
+        throw bp::error(msg);
     }
 
 private:
+    bool canIngore_=false;
     std::string const* one_=nullptr;
     std::vector<std::string> opts_;
 };
