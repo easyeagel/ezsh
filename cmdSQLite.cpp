@@ -195,9 +195,72 @@ public:
 
 };
 
+class CmdSQLiteExport: public CmdBaseT<CmdSQLiteExport>
+{
+    typedef CmdBaseT<CmdSQLiteExport> BaseThis;
+public:
+    CmdSQLiteExport()
+        :BaseThis("sqliteExport - export file or dir to sqlite database")
+    {
+        opt_.add_options()
+            ("noBase", "no base")
+            ("db",       bp::value<std::string>()->required(), "sqlite database")
+            ("table",    bp::value<std::string>(), "table name of sqlite database")
+            ("dir",      bp::value<std::string>()->required(), "file or dir to export")
+            ("password", bp::value<std::string>(), "password for encrypt")
+        ;
+    }
+
+    static const char* nameGet()
+    {
+        return "sqliteExport";
+    }
+
+    void doit()
+    {
+        const auto& vm=mapGet();
+
+        const auto& db=vm["db"].as<std::string>();
+        dir_=vm["dir"].as<std::string>();
+
+        sqlite_.reset(new SQLite::Database(db, SQLITE_OPEN_READONLY));
+
+        auto itr=vm.find("password");
+        if(itr!=vm.end())
+            sqlite_->setEncryptKey(itr->second.as<std::string>());
+
+        itr=vm.find("table");
+        if(itr!=vm.end())
+            table_=itr->second.as<std::string>();
+
+        fileExport();
+    }
+
+    void fileExport()
+    {
+        const std::string sql= "select name, value from " + table_ + ";";
+        query_.reset(new SQLite::Statement(*sqlite_, sql));
+
+        while(query_->executeStep())
+        {
+            const auto& key=query_->getColumn(0);
+            const auto& val=query_->getColumn(1);
+
+            std::cout << std::string(static_cast<const char*>(val.getBlob()), val.getBytes()) << std::endl;
+        }
+    }
+
+private:
+    std::string dir_;
+    std::string table_;
+    std::shared_ptr<SQLite::Database> sqlite_;
+    std::shared_ptr<SQLite::Statement> query_;
+};
+
 namespace
 {
-static CmdRegisterT<CmdSQLiteImport> gsRegister;
+    static CmdRegisterT<CmdSQLiteImport> gsRegister;
+    static CmdRegisterT<CmdSQLiteExport> gsRegisterExport;
 }
 
 }

@@ -76,6 +76,7 @@ include_directories(SYSTEM
     ${CoreDir}
     ${CoreDir}/sqlite
     ${CoreDir}/webp/src
+	${CoreDir}/leveldb/include
     ${BoostRoot}/include
     ${CMAKE_CONFIGURATION_HEADER_DIR}
 )
@@ -99,7 +100,7 @@ add_subdirectory(${CoreDir}/sqlite)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #===============================================================================================
 set(ezshSrc
-    cmdText.cpp cmdMove.cpp cmdIfElse.cpp cmdCopy.cpp cmdMakeDir.cpp
+    cmdText.cpp cmdMove.cpp cmdIfElse.cpp cmdCopy.cpp cmdMakeDir.cpp cmdMD5Sum.cpp
     cmdTextpp.cpp cmdContext.cpp cmdScript.cpp cmdStart.cpp cmdUnicode.cpp
     cmdList.cpp cmdRemove.cpp cmdSQLite.cpp cmdWebp.cpp cmdForeach.cpp
     parser.cpp error.cpp ezsh.cpp option.cpp context.cpp glob.cpp script.cpp
