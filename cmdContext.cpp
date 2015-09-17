@@ -40,6 +40,7 @@ public:
             ("list",   bp::value<std::vector<std::string>>()->multitoken(), "set context list var")
             ("listif", bp::value<std::vector<std::string>>()->multitoken(), "set context list var, if the var not exist")
             ("echo",   bp::value<std::vector<std::string>>()->multitoken(), "echo this params")
+            ("file",   bp::value<std::vector<std::string>>()->multitoken(), "set context var, value is from file")
         ;
     }
 
@@ -76,37 +77,50 @@ public:
         itr=vm.find("unset");
         if(itr!=vm.end())
             visitor.unsetDo(itr->second.as<std::vector<std::string>>());
+
+        itr=vm.find("file");
+        if(itr!=vm.end())
+            fileDoit(itr->second.as<std::vector<std::string>>(), visitor);
     }
 
     void doDry()
     {
         BaseThis::doDry();
-
-        ContextVisitor visitor(*contextGet());
-
-        const auto& vm=mapGet();
-        auto itr=vm.find("set");
-        if(itr!=vm.end())
-            visitor.setDo(itr->second.as<std::vector<std::string>>());
-
-        itr=vm.find("setif");
-        if(itr!=vm.end())
-            visitor.setIfDo(itr->second.as<std::vector<std::string>>());
-
-        itr=vm.find("list");
-        if(itr!=vm.end())
-            visitor.setListDo(itr->second.as<std::vector<std::string>>());
-
-        itr=vm.find("listif");
-        if(itr!=vm.end())
-            visitor.setIfListDo(itr->second.as<std::vector<std::string>>());
-
-        itr=vm.find("unset");
-        if(itr!=vm.end())
-            visitor.unsetDo(itr->second.as<std::vector<std::string>>());
+        doit();
     }
 
 private:
+    void fileDoit(const std::vector<std::string>& files, ContextVisitor& visitor)
+    {
+        std::string content;
+        std::vector<std::string> contents;
+        for(auto& line: files)
+        {
+            const auto pair=simpleSplit(line, '=');
+            if(pair.first.empty() || pair.second.empty())
+                continue;
+
+            //读取文件内容
+            Path path=pair.second;
+            bf::ifstream strm(path.path());
+            if(!strm)
+            {
+                contextGet()->stdErr() << "open file failed: " << path << std::endl;
+                continue;
+            }
+
+            content = pair.first;
+            content += '=';
+
+            std::istreambuf_iterator<char> itr(strm);
+            std::istreambuf_iterator<char> const end;
+            std::copy(itr, end, std::back_inserter(content));
+
+            contents.emplace_back(content);
+        }
+
+        visitor.setDo(contents);
+    }
 };
 
 namespace

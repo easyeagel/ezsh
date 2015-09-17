@@ -22,6 +22,7 @@
 #include"parser.hpp"
 #include"filesystem.hpp"
 #include<boost/xpressive/xpressive.hpp>
+#include<boost/algorithm/string/split.hpp>
 #include<boost/algorithm/string/replace.hpp>
 #include<boost/algorithm/string/predicate.hpp>
 
@@ -109,6 +110,28 @@ private:
         return result(ret, splited, dest);
     }
 
+    //执行变量分隔
+    //格式: [@split][var]...
+    std::string splitReplace(const Context& ctx, const ReplacePattern::Operator& opt, bool /* splited */, StrCommandLine& dest)
+    {
+        for(const auto& param: opt.params)
+        {
+            const auto& str=ctx.stringGet(param.value, param.value);
+            if(str.empty())
+                continue;
+
+            std::vector<std::string> tmp;
+            boost::algorithm::split(tmp, str, boost::algorithm::is_any_of(",;"), boost::algorithm::token_compress_on);
+            for(auto& s: tmp)
+            {
+                boost::algorithm::trim(s);
+                dest.emplace_back(std::move(s));
+            }
+        }
+
+        return std::string();
+    }
+
     std::string result(std::string src, bool splited, StrCommandLine& dest)
     {
         if(splited==false)
@@ -146,9 +169,10 @@ private:
 ContextReplace::Unit ContextReplace::dict_[]=
 {
 #define MD(CppName, CppCall) {#CppName, &ContextReplace::CppCall},
-    MD(match,   matchReplace)
     MD(include, includeReplace)
+    MD(match,   matchReplace)
     MD(replace, replaceReplace)
+    MD(split, splitReplace)
 #undef MD
 };
 

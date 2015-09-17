@@ -56,7 +56,7 @@ void ReplacePattern::init(const std::vector<std::string>& what)
                     op.params.emplace_back(Param{eValue, str.substr(1)});
                     break;
                 case '+':
-                    op.params.emplace_back(Param{eValue, str.substr(1)});
+                    op.params.emplace_back(Param{eList, str.substr(1)});
                     break;
                 default:
                     op.params.emplace_back(Param{eLiteral, str});

@@ -65,7 +65,7 @@ public:
         :BaseThis("textpp - textpp file or dir")
     {
         opt_.add_options()
-            ("define,D", bp::value<std::vector<std::string>>(), "define a macro")
+            ("define,D",  bp::value<std::vector<std::string>>(), "define a macro")
             ("defFile,F", bp::value<std::vector<std::string>>(), "define a macro from many files")
         ;
     }
