@@ -203,20 +203,20 @@ private:
 
         std::memset(&si, 0, sizeof(si));
         si.cb = sizeof(si);
-        std::memset(&pi, 0, sizeof(pi) );
+        std::memset(&pi, 0, sizeof(pi));
 
         stdIOReset(si);
 
         if (!::CreateProcessW(nullptr,
-            const_cast<wchar_t*>(cmd.data()),        // Command line
-            nullptr,           // Process handle not inheritable
-            nullptr,           // Thread handle not inheritable
+            const_cast<wchar_t*>(cmd.data()),  // Command line
+            nullptr,       // Process handle not inheritable
+            nullptr,       // Thread handle not inheritable
             true,          // Set handle inheritance to true
-            0,              // No creation flags
-            nullptr,           // Use parent's environment block
-            nullptr,           // Use parent's starting directory 
-            &si,            // Pointer to STARTUPINFO structure
-            &pi )           // Pointer to PROCESS_INFORMATION structure
+            0,             // No creation flags
+            nullptr,       // Use parent's environment block
+            nullptr,       // Use parent's starting directory 
+            &si,           // Pointer to STARTUPINFO structure
+            &pi )          // Pointer to PROCESS_INFORMATION structure
         ) 
         {
             stdErr() << cmd << ": CreateProcess failed: " << ::GetLastError() << std::endl;

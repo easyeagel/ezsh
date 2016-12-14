@@ -205,6 +205,12 @@ private:
                 continue;
             }
 
+            if(opt.name=="split")
+            {
+                splitReplace(opt, out);
+                continue;
+            }
+
             ec=EzshError::ecMake(EzshError::eUnkownTextppOperator, opt.name);
         }
     }
@@ -234,6 +240,22 @@ private:
             if(!strm)
                 continue;
             fileOne(strm, out);
+        }
+    }
+
+    template<typename Itr>
+    void splitReplace(const ReplacePattern::Operator& opt, Itr& out) const
+    {
+        for(const auto& param: opt.params)
+        {
+            auto str=simpleReplace(param.value);
+            std::vector<std::string> rlt;
+            boost::algorithm::split(rlt, str, boost::algorithm::is_any_of(", "), boost::algorithm::token_compress_on);
+            for(auto& s: rlt)
+            {
+                std::copy(s.begin(), s.end(), out);
+                *out++ =  ',';
+            }
         }
     }
 

@@ -212,10 +212,7 @@ public:
         return stdErr_;
     }
 
-    void set(const std::string& name, const VarSPtr& val)
-    {
-        vars_[name]=val;
-    }
+    void set(const std::string& name, const VarSPtr& val);
 
     void setif(const std::string& name, const VarSPtr& val);
 
@@ -227,7 +224,8 @@ public:
     template<typename Val>
     void set(const std::string& name, const Val& val)
     {
-        vars_[name]=VarSPtr(new Variable(val));
+        const VarSPtr ptr=new Variable(val);
+        set(name, ptr);
     }
 
     template<typename Val>
@@ -238,6 +236,8 @@ public:
             return;
         set(name, val);
     }
+
+    void exportdo(const std::string& name);
 
     VarSPtr get(const std::string& name) const;
     std::string stringGet(const std::string& name) const;
@@ -308,6 +308,7 @@ public:
     void setIfListDo(const std::vector<std::string>& sets);
     void unsetDo(const std::vector<std::string>& sets);
     void echoDo(const std::vector<std::string>& echos);
+    void exportDo(const std::vector<std::string>& echos);
 
 private:
     Context& ctx_;
@@ -343,6 +344,44 @@ public:
 
 private:
     std::deque<ContextSPtr> stack_;
+};
+
+class SysVar
+{
+public:
+    enum
+    {
+        eVarNull,
+        eVarOS,
+        eVarDelimiter,
+        eVarLineBreak,
+
+        eVarEnumCount
+    };
+
+    struct VarInfo
+    {
+        int var;
+        std::string name;
+        std::string value;
+    };
+
+    static const VarInfo& infoGet(unsigned var)
+    {
+        if(var>=dict_.size())
+            return dict_[eVarNull];
+        return dict_[var];
+    }
+
+    typedef std::array<VarInfo, eVarEnumCount> Dict;
+
+    static const Dict& dictGet()
+    {
+        return dict_;
+    }
+
+private:
+    static Dict dict_;
 };
 
 

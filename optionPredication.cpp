@@ -24,13 +24,15 @@ namespace ezsh
 void Predication::Component::options(bp::options_description& opt, bp::positional_options_description& )
 {
     opt.add_options()
-        ("exist",        bp::value<std::vector<std::string>>(), "retrun true, if this exist")
-        ("existNot",     bp::value<std::vector<std::string>>(), "retrun true, if this not exist")
-        ("fileExist",    bp::value<std::vector<std::string>>(), "retrun true, if this file exist")
-        ("fileExistNot", bp::value<std::vector<std::string>>(), "retrun true, if this file not exist")
-        ("dirExist",     bp::value<std::vector<std::string>>(), "retrun true, if this dir exist")
-        ("dirExistNot",  bp::value<std::vector<std::string>>(), "retrun true, if this dir not exist")
-        ("isDefined",    bp::value<std::vector<std::string>>(), "return true, if this vars is defined")
+        ("exist",        bp::value<std::vector<std::string>>()->multitoken(), "retrun true, if this exist")
+        ("existNot",     bp::value<std::vector<std::string>>()->multitoken(), "retrun true, if this not exist")
+        ("fileExist",    bp::value<std::vector<std::string>>()->multitoken(), "retrun true, if this file exist")
+        ("fileExistNot", bp::value<std::vector<std::string>>()->multitoken(), "retrun true, if this file not exist")
+        ("dirExist",     bp::value<std::vector<std::string>>()->multitoken(), "retrun true, if this dir exist")
+        ("dirExistNot",  bp::value<std::vector<std::string>>()->multitoken(), "retrun true, if this dir not exist")
+        ("isDefined",    bp::value<std::vector<std::string>>()->multitoken(), "return true, if this vars is defined")
+        ("isEqual",      bp::value<std::vector<std::string>>()->multitoken(), "return true, if all string is equal")
+        ("equalNot",     bp::value<std::vector<std::string>>()->multitoken(), "return true, if not all string is equal")
     ;
 }
 
@@ -94,6 +96,7 @@ void Predication::init(const bp::variables_map& vm)
         }
     }
 
+    {
     auto itr=vm.find("isDefined");
     if(itr!=vm.end())
     {
@@ -106,6 +109,50 @@ void Predication::init(const bp::variables_map& vm)
                 return;
             }
         }
+    }
+    }
+
+    {
+    auto itr=vm.find("isEqual");
+    if(itr!=vm.end())
+    {
+        const auto& vars=itr->second.as<std::vector<std::string>>();
+        if(!vars.empty())
+        {
+            const auto& t=vars.back();
+            for(const auto& var: vars)
+            {
+                if(var!=t)
+                {
+                    isPassed_=false;
+                    return;
+                }
+            }
+        }
+    }
+    }
+
+    {
+    auto itr=vm.find("equalNot");
+    if(itr!=vm.end())
+    {
+        const auto& vars=itr->second.as<std::vector<std::string>>();
+        if(!vars.empty())
+        {
+            const auto& t=vars.back();
+            auto const ret=std::all_of(vars.begin(), vars.end(), [&t](const std::string& v)
+                {
+                    return v==t;
+                }
+            );
+
+            if(ret==true)
+            {
+                isPassed_=false;
+                return;
+            }
+        }
+    }
     }
 
     isPassed_=true;

@@ -41,6 +41,7 @@ public:
             ("listif", bp::value<std::vector<std::string>>()->multitoken(), "set context list var, if the var not exist")
             ("echo",   bp::value<std::vector<std::string>>()->multitoken(), "echo this params")
             ("file",   bp::value<std::vector<std::string>>()->multitoken(), "set context var, value is from file")
+            ("export", bp::value<std::vector<std::string>>()->multitoken(), "export context var up")
         ;
     }
 
@@ -81,6 +82,10 @@ public:
         itr=vm.find("file");
         if(itr!=vm.end())
             fileDoit(itr->second.as<std::vector<std::string>>(), visitor);
+
+        itr=vm.find("export");
+        if(itr!=vm.end())
+            visitor.exportDo(itr->second.as<std::vector<std::string>>());
     }
 
     void doDry()

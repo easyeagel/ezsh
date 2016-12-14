@@ -67,7 +67,7 @@ private:
         if(!u.isExist())
         {
             errorSet(EzshError::ecMake(EzshError::eParamNotExist));
-            errorReport() << ": not exist" << u.total << std::endl;
+            errorReport() << ": not exist: " << u.total << std::endl;
             return;
         }
 

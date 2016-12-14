@@ -99,11 +99,16 @@ private:
     std::string replaceReplace(const Context& ctx, const ReplacePattern::Operator& opt, bool splited, StrCommandLine& dest)
     {
         std::string ret;
+        auto& info=SysVar::infoGet(SysVar::eVarDelimiter);
+        const std::string& del=ctx.stringGet(info.name, SysVar::infoGet(SysVar::eVarDelimiter).value);
         for(const auto& param: opt.params)
         {
-            const auto& str=ctx.stringGet(param.value, param.value);
-            if(!ret.empty() && !str.empty())
-                ret += ' ';
+            const auto& str=ctx.stringGet(param.value);
+            if(str.empty())
+                continue;
+
+            if(!ret.empty())
+                ret += del;
             ret += str;
         }
 
@@ -112,8 +117,11 @@ private:
 
     //执行变量分隔
     //格式: [@split][var]...
-    std::string splitReplace(const Context& ctx, const ReplacePattern::Operator& opt, bool /* splited */, StrCommandLine& dest)
+    std::string splitReplace(const Context& ctx, const ReplacePattern::Operator& opt, bool  splited , StrCommandLine& dest)
     {
+        std::string ret;
+        auto& info=SysVar::infoGet(SysVar::eVarDelimiter);
+        const std::string& del=ctx.stringGet(info.name, info.value);
         for(const auto& param: opt.params)
         {
             const auto& str=ctx.stringGet(param.value, param.value);
@@ -125,11 +133,18 @@ private:
             for(auto& s: tmp)
             {
                 boost::algorithm::trim(s);
-                dest.emplace_back(std::move(s));
+                if(splited)
+                    dest.emplace_back(std::move(s));
+                else
+                {
+                    if(!ret.empty())
+                        ret += del;
+                    ret += s;
+                }
             }
         }
 
-        return std::string();
+        return ret;
     }
 
     std::string result(std::string src, bool splited, StrCommandLine& dest)
@@ -218,6 +233,26 @@ VarSPtr Context::get(const std::string& name) const
     return nullptr;
 }
 
+void Context::set(const std::string& name, const VarSPtr& val)
+{
+    auto ctx=shared_from_this();
+    while(ctx)
+    {
+        auto const itr=ctx->vars_.find(name);
+        if(itr==ctx->vars_.end())
+        {
+            ctx=ctx->frontGet();
+            continue;
+        }
+
+        //找到使用原先的
+        itr->second=val;
+        return;
+    }
+
+    vars_[name]=val;
+}
+
 std::string Context::stringGet(const std::string& name) const
 {
     return stringGet(name, std::string());
@@ -254,6 +289,21 @@ std::string Context::stringGet(const std::string& name, const std::string& def) 
 
     ret.resize(ret.size()-1);
     return std::move(ret);
+}
+
+void Context::exportdo(const std::string& name)
+{
+    if(!front_) //已经在最顶层了
+        return;
+
+    auto const itr=vars_.find(name);
+    if(itr==vars_.end()) //不在当前层，不需要上传
+        return;
+
+    //把当前定义移入上层
+    auto const f=frontGet();
+    f->vars_.insert(std::move(*itr));
+    vars_.erase(itr);
 }
 
 void ContextVisitor::setDo(const std::vector<std::string>& sets)
@@ -324,6 +374,12 @@ void ContextVisitor::echoDo(const std::vector<std::string>& echos)
     ctx_.stdOut() << echos.back() << std::endl;
 }
 
+void ContextVisitor::exportDo(const std::vector<std::string>& vars)
+{
+    for(const auto& s: vars)
+        ctx_.exportdo(s);
+}
+
 void Context::cmdlineReplace(ErrorCode& ec, const StrCommandLine& cmd, StrCommandLine& dest) const
 {
     dest.clear();
@@ -350,33 +406,26 @@ void Context::cmdlineReplace(ErrorCode& ec, const StrCommandLine& cmd, StrComman
     }
 }
 
-namespace
+std::array<SysVar::VarInfo, SysVar::eVarEnumCount> SysVar::dict_ =
 {
-    struct Unit
     {
-        const char* name;
-        const char* value;
-    };
-
-    //预定义全局变量
-    static Unit gsDict[]=
-    {
-#define MD(CppName, CppValue) {"g:" #CppName, #CppValue},
-#ifdef WIN32
-        MD(osType, windows)
-#elif defined(__linux__)
-        MD(osType, linux)
+        {eVarNull,      "g:null",       "null"},
+#if defined(WIN32)
+        {eVarOS,        "g:os",         "windows"},
 #elif defined(__APPLE__)
-        MD(osType, macos)
+        {eVarOS,        "g:os",         "macos"},
+#else
+        {eVarOS,        "g:os",         "unix"},
 #endif
-#undef MD
-    };
-}
+        {eVarDelimiter, "g:delimiter",  " "},
+        {eVarDelimiter, "g:lineBreak",  "\n"},
+    }
+};
 
 ContextStack::ContextStack()
 {
     ContextSPtr ptr(new Context);
-    for(const auto& u: gsDict)
+    for(const auto& u: SysVar::dictGet())
         ptr->set(u.name, VarSPtr(new Variable(u.value)));
     stack_.emplace_back(ptr);
 }
