@@ -35,10 +35,10 @@ endif()
 
 #--------------------------------------------------------------------------------------#
 #平台相关的编译选项
-set(BoostRoot $ENV{BoostLibPrefix})
+set(BoostRoot $ENV{BoostRoot})
 add_definitions(-DGMacroSourceRoot=${CMAKE_SOURCE_DIR})
 if(GCC)
-    set(ComplierRoot $ENV{HOME}/self/gcc49)
+    set(ComplierRoot $ENV{HOME}/self/gcc62)
     add_definitions(-DEasyGCC)
     set(CFlags  "-MP -MMD -pipe -fPIC -pipe -fdiagnostics-color=auto")
     set(CDebugFlags     "-g3 -O0 -DDEBUG ")
