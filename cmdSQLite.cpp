@@ -121,10 +121,19 @@ private:
             return;
         }
 
-        const auto fz=boost::filesystem::file_size(path);
+        auto fz=boost::filesystem::file_size(path);
         std::string content(static_cast<size_t>(fz), '\0');
-        bf::ifstream file(path);
-        file.read(const_cast<char*>(content.data()), fz);
+        bf::ifstream file(path, std::ios_base::in|std::ios_base::binary);
+        for(auto ptr=const_cast<char*>(content.data());;)
+        {
+            file.read(ptr, fz);
+            auto const rc=file.gcount();
+            if(rc>=static_cast<long>(fz))
+                break;
+            fz -= rc;
+            ptr += rc;
+        }
+        
 
         query_->bind(2, 0);
         query_->bind(3, static_cast<const void*>(content.data()), content.size());
@@ -200,7 +209,7 @@ class CmdSQLiteExport: public CmdBaseT<CmdSQLiteExport>
     typedef CmdBaseT<CmdSQLiteExport> BaseThis;
 public:
     CmdSQLiteExport()
-        :BaseThis("sqliteExport - export file or dir to sqlite database")
+        :BaseThis("sqliteExport - export file or dir from sqlite database")
     {
         opt_.add_options()
             ("noBase", "no base")
@@ -246,13 +255,13 @@ public:
             const auto& key=query_->getColumn(0);
             const auto& val=query_->getColumn(1);
 
-            std::cout << std::string(static_cast<const char*>(val.getBlob()), val.getBytes()) << std::endl;
+            std::cout << std::string(static_cast<const char*>(val.getBlob()), val.getBytes());
         }
     }
 
 private:
     std::string dir_;
-    std::string table_;
+    std::string table_="ezshSQLiteImportFiles";
     std::shared_ptr<SQLite::Database> sqlite_;
     std::shared_ptr<SQLite::Statement> query_;
 };
