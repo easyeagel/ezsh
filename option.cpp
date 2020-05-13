@@ -37,11 +37,11 @@ CmdBase::CmdBase(const char* msg, bool ne)
         ("error", bp::value<int>()->default_value(eErrorReport),
              "error attitude:\n0: ignore, 1: quiet, 2: report, 3: break")
 
-        ("stdIn",    bp::value<std::string>(), "stdin will redirect to file or context")
-        ("stdOut",   bp::value<std::string>(), "stdout will write to file or context")
-        ("stdError", bp::value<std::string>(), "stderr will write to file or context")
-        ("stdOutAppend",   bp::value<std::string>(), "stdout will append to file or context")
-        ("stdErrorAppend", bp::value<std::string>(), "stderr will append to file or context")
+        ("stdIn",    bp::value<std::string>(), "stdin will redirect to file or context, * + will set or append to context")
+        ("stdOut",   bp::value<std::string>(), "stdout will write to file or context, same up")
+        ("stdError", bp::value<std::string>(), "stderr will write to file or context, same up")
+        ("stdOutAppend",   bp::value<std::string>(), "stdout will append to file or context, same up")
+        ("stdErrorAppend", bp::value<std::string>(), "stderr will append to file or context, same up")
     ;
 }
 

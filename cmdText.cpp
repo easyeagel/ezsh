@@ -33,16 +33,17 @@ class CmdText:public CmdBaseT<CmdText, FileSetCmdBase<OutPutCmdBase<>>>
     typedef std::function<void (ErrorCode& , const FileUnit& , const FileUnit& )> Funtor;
 public:
     CmdText()
-        :BaseThis("text - text process (replace,search..) for file")
+        :BaseThis("text - text process (replace,search,cat,..) for file")
     {
         opt_.add_options()
+            ("cat",         bp::value<std::string>(), "cat file content to stdout")
             ("search",      bp::value<std::string>(), "search string in files")
             ("regexSearch", bp::value<std::string>(), "regex search in files")
             ("replace",     bp::value<std::string>(), "replace string with string in files")
             ("regexReplace",bp::value<std::string>(), "replace regex with string in files")
         ;
 
-        oneAndOnly_.add({"search", "regexSearch", "replace", "regexReplace"});
+        oneAndOnly_.add({"cat", "search", "regexSearch", "replace", "regexReplace"});
         oneAndOnly_.doit(*this);
     }
 
@@ -126,6 +127,7 @@ private:
 #define MD(CppMethod)\
     { #CppMethod, [this](ErrorCode& ec, const FileUnit& in, const FileUnit& out){ return CppMethod(ec, in, out); } },
 
+            MD(cat)
             MD(search)
             MD(replace)
 
@@ -206,6 +208,20 @@ private:
 
         if(in.total==out.total)
             bf::rename(outPath, out.total, ec);
+    }
+
+    void cat(ErrorCode& ec, const FileUnit& in, const FileUnit&) const
+    {
+        bf::ifstream strm(in.total.path());
+        if(!strm)
+        {
+            ec=EzshError::ecMake(EzshError::eParamInvalid);
+            return;
+        }
+
+        std::string line;
+        while(std::getline(strm, line))
+            stdOut() << line << std::endl;
     }
 
 private:

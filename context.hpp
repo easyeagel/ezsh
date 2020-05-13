@@ -45,7 +45,7 @@ static inline CommandLine cmdlineMake(const StrCommandLine& sc)
     CommandLine ret;
     for(auto& s: sc)
         ret.push_back(const_cast<char*>(s.data()));
-    return std::move(ret);
+    return ret;
 }
 
 typedef std::string VarString;

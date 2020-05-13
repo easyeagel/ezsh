@@ -79,7 +79,7 @@ include_directories(SYSTEM
     ${CoreDir}
     ${CoreDir}/sqlite
     ${CoreDir}/webp/src
-	${CoreDir}/leveldb/include
+    ${CoreDir}/leveldb/include
     ${BoostRoot}/include
     ${CMAKE_CONFIGURATION_HEADER_DIR}
 )
@@ -118,8 +118,8 @@ set(BoostLibs
 )
 set(ezshLibs core sqlite webp)
 if(MSVC)
-    set(dsub "-vc140-mt-sgd-1_59")
-    set(rsub "-vc140-mt-s-1_59")
+    set(dsub "-vc141-mt-sgd-1_64")
+    set(rsub "-vc141-mt-s-1_64")
     target_link_libraries(ezsh ${ezshLibs})
     foreach(file ${BoostLibs})
         target_link_libraries(ezsh debug lib${file}${dsub} optimized lib${file}${rsub})

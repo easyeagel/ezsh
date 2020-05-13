@@ -26,8 +26,10 @@ namespace ezsh
 
 using core::ErrorCode;
 
+#include<core/gccWaringDisable.hpp>
 class EzshError: public core::details::ECatBase
 {
+#include<core/gccWaringEnable.hpp>
     enum Snatch { eCodeSnatch=8 };
 
     EzshError()=default;
@@ -62,7 +64,7 @@ public:
 
     static ErrorCode ecMake(Code_t ec, const std::string& msg)
     {
-        return ErrorCode(msg, ec, instance());
+        return ErrorCode(ec, instance(), msg);
     }
 
     template<typename Value>

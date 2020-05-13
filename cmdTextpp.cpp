@@ -271,7 +271,7 @@ private:
                 return itr->second;
             }
         );
-        return std::move(out);
+        return out;
     }
 
 private:

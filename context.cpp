@@ -150,7 +150,7 @@ private:
     std::string result(std::string src, bool splited, StrCommandLine& dest)
     {
         if(splited==false)
-            return std::move(src);
+            return src;
 
         CmdLineSeparator sep;
         auto itr=src.begin();
@@ -288,7 +288,7 @@ std::string Context::stringGet(const std::string& name, const std::string& def) 
     }
 
     ret.resize(ret.size()-1);
-    return std::move(ret);
+    return ret;
 }
 
 void Context::exportdo(const std::string& name)
