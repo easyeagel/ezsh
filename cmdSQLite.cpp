@@ -43,14 +43,14 @@ public:
     void init(const std::string& db, std::vector<std::string> dirs)
     {
         dirs_=std::move(dirs);
-        sqlite_.reset(new SQLite::Database(db, SQLITE_OPEN_CREATE|SQLITE_OPEN_READWRITE));
+        sqlite_.reset(new SQLite::Database(db, SQLite::OPEN_CREATE|SQLite::OPEN_READWRITE));
     }
 
     void init (const std::string& db, const std::string& tab, std::vector<std::string> dirs)
     {
         table_=tab;
         dirs_=std::move(dirs);
-        sqlite_.reset(new SQLite::Database(db, SQLITE_OPEN_CREATE|SQLITE_OPEN_READWRITE));
+        sqlite_.reset(new SQLite::Database(db, SQLite::OPEN_CREATE|SQLite::OPEN_READWRITE));
     }
 
     void noBaseSet(bool v=true)
@@ -60,7 +60,7 @@ public:
 
     void encryptKeySet(const std::string& key)
     {
-        sqlite_->setEncryptKey(key);
+        sqlite_->key(key);
     }
 
     void save()
@@ -232,11 +232,11 @@ public:
         const auto& db=vm["db"].as<std::string>();
         dir_=vm["dir"].as<std::string>();
 
-        sqlite_.reset(new SQLite::Database(db, SQLITE_OPEN_READONLY));
+        sqlite_.reset(new SQLite::Database(db, SQLite::OPEN_READONLY));
 
         auto itr=vm.find("password");
         if(itr!=vm.end())
-            sqlite_->setEncryptKey(itr->second.as<std::string>());
+            sqlite_->key(itr->second.as<std::string>());
 
         itr=vm.find("table");
         if(itr!=vm.end())

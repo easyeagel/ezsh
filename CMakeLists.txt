@@ -84,7 +84,7 @@ include_directories(SYSTEM
     ${CMAKE_CONFIGURATION_HEADER_DIR}
 )
 include_directories(${CMAKE_SOURCE_DIR})
-link_directories(${BoostRoot}/lib ${CMAKE_BINARY_DIR})
+link_directories(${BoostRoot}/lib ${CMAKE_BINARY_DIR}/lib )
 
 set(CMAKE_C_FLAGS_DEBUG       "${CMAKE_C_FLAGS_DEBUG}     ${CWarningFlags}   ${CFlags}   ${CDebugFlags}")
 set(CMAKE_C_FLAGS_RELEASE     "${CMAKE_C_FLAGS_RELEASE}   ${CWarningFlags}   ${CFlags}   ${CReleaseFlags}")
