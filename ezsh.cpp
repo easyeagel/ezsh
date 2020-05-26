@@ -29,20 +29,24 @@ namespace ezsh
 {
 
 //假设命令行参数都是utf8编码
-void myMain(int& ret, int argc, char* argv[])
+void myMain(int& ret, StrCommandLine& arg)
 {
     auto& cs=ContextStack::instance();
     const auto topCtx=cs.top();
-    topCtx->start([&ret, &argc, &argv]()
+    topCtx->start([&ret, &arg]()
         {
-            std::string cmdName(argc<=1 ? "help" : argv[1]);
+            if(arg.size()<=1)
+                arg.push_back("help");
+
+            const std::string& cmdName=arg[1];
             auto trait=CmdDict::find(cmdName);
             if(trait==nullptr)
             {
                 std::cerr
                     << "\n\nunkown command: "
-                    << argv[1] << "\n\n" << std::endl;
-                argc=2;
+                    << arg[1] << "\n\n" << std::endl;
+                arg.resize(2);
+                arg[1]="help";
                 trait=CmdDict::find("help");
             }
             assert(trait);
@@ -50,8 +54,8 @@ void myMain(int& ret, int argc, char* argv[])
             const auto& cmd=trait->create();
             try
             {
-                argc -= 1, argv += 1;
-                cmd->parse(StrCommandLine(argv, argv+argc));
+                arg.assign(arg.begin()+1, arg.end());
+                cmd->parse(StrCommandLine(arg));
             } catch (const boost::program_options::error& ec) {
                 std::cerr << ec.what() << std::endl;
                 ret=static_cast<int>(EzshError::eParamInvalid);
@@ -81,19 +85,15 @@ int wmain(int argc, const wchar_t* argv[])
 
     ezsh::Environment::instance();
 
-    std::vector<std::string> args;
+    std::vector<std::string> arg;
     for(int i=0; i<argc; ++i)
-        args.emplace_back(core::WCharConverter::to(argv[i], std::wcslen(argv[i])));
-
-    std::vector<char*> argData;
-    for(const auto& arg: args)
-        argData.push_back(const_cast<char*>(arg.data()));
+        arg.emplace_back(core::WCharConverter::to(argv[i], std::wcslen(argv[i])));
 
     int ret=0;
     auto& ms=core::MainServer::instance();
-    ms.post([&argData, &ret]()
+    ms.post([&arg, &ret]()
         {
-            ezsh::myMain(ret, argData.size(), argData.data());
+            ezsh::myMain(ret, arg);
         }
     );
 
@@ -117,7 +117,10 @@ int main(int argc, char* argv[])
     auto& ms=core::MainServer::instance();
     ms.post([argc, argv, &ret]()
         {
-            ezsh::myMain(ret, argc, argv);
+            ezsh::StrCommandLine arg;
+            for(int i=0; i<argc; ++i)
+                arg.push_back(argv[i]);
+            ezsh::myMain(ret, arg);
         }
     );
 
