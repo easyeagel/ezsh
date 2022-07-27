@@ -115,7 +115,14 @@ private:
         bf::ofstream out(newFile);
         out.write(reinterpret_cast<const char*>(utf8::bom), sizeof(utf8::bom));
         std::copy(std::istreambuf_iterator<char>(strm), std::istreambuf_iterator<char>(), std::ostreambuf_iterator<char>(out));
-        bf::rename(newFile, file.total);
+
+        strm.close();
+        out.close();
+
+        ErrorCode ec;
+        bf::rename(newFile, file.total, ec);
+        if(ec.bad())
+            stdErr() << "rename-failed: " << ec.message() << std::endl;
     }
 
     void bomRemove(const FileUnit& file)
@@ -143,7 +150,14 @@ private:
         newFile += pathCreate(".new");
         bf::ofstream out(newFile);
         std::copy(std::istreambuf_iterator<char>(strm), std::istreambuf_iterator<char>(), std::ostreambuf_iterator<char>(out));
-        bf::rename(newFile, file.total);
+
+        out.close();
+        strm.close();
+
+        ErrorCode ec;
+        bf::rename(newFile, file.total, ec);
+        if(ec.bad())
+            stdErr() << "rename-failed: " << ec.message() << std::endl;
     }
 
 private:
